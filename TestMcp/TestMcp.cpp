@@ -252,6 +252,87 @@ void test_array_building() {
 }
 
 // =============================================================================
+// TEST 11: GENERIC JSON (NON-MCP) PARSING
+// =============================================================================
+
+void test_parse_generic_json() {
+    std::cout << "\n=== TEST 11: Parse Generic JSON (non-MCP) ===" << std::endl;
+
+    // Plain object — no JSON-RPC fields at all
+    {
+        const char* json = R"({"name":"Alice","age":30,"active":true})";
+        MCPMessage msg = parse_mcp_json(json, strlen(json));
+
+        assert_eq("Generic object: parses without error",  msg.valid);
+        assert_eq("Generic object: not flagged as request",  !msg.is_request);
+        assert_eq("Generic object: not flagged as response", !msg.is_response);
+        assert_eq("Generic object: no result",               !msg.has_result);
+        assert_eq("Generic object: no error",                !msg.has_error);
+    }
+
+    // Nested object
+    {
+        const char* json = R"({"user":{"id":42,"role":"admin"},"count":7})";
+        MCPMessage msg = parse_mcp_json(json, strlen(json));
+
+        assert_eq("Nested object: parses without error",  msg.valid);
+        assert_eq("Nested object: not a request",         !msg.is_request);
+        assert_eq("Nested object: not a response",        !msg.is_response);
+    }
+
+    // Array values
+    {
+        const char* json = R"({"tags":["a","b","c"],"scores":[1,2,3]})";
+        MCPMessage msg = parse_mcp_json(json, strlen(json));
+
+        assert_eq("Array values: parses without error", msg.valid);
+        assert_eq("Array values: not a request",        !msg.is_request);
+    }
+
+    // Deeply nested object (within depth limit)
+    {
+        const char* json = R"({"a":{"b":{"c":{"d":{"e":"deep"}}}}})";
+        MCPMessage msg = parse_mcp_json(json, strlen(json));
+
+        assert_eq("Deep nesting: parses without error", msg.valid);
+    }
+
+    // Mixed types
+    {
+        const char* json = R"({"str":"hello","num":123,"flt":3.14,"flag":false,"nothing":null})";
+        MCPMessage msg = parse_mcp_json(json, strlen(json));
+
+        assert_eq("Mixed types: parses without error", msg.valid);
+    }
+
+    // Empty object
+    {
+        const char* json = "{}";
+        MCPMessage msg = parse_mcp_json(json, strlen(json));
+
+        assert_eq("Empty object: parses without error", msg.valid);
+        assert_eq("Empty object: not a request",        !msg.is_request);
+        assert_eq("Empty object: not a response",       !msg.is_response);
+    }
+
+    // Malformed JSON — should fail gracefully
+    {
+        const char* json = R"({"key": "unterminated)";
+        MCPMessage msg = parse_mcp_json(json, strlen(json));
+
+        assert_eq("Malformed JSON: valid is false", !msg.valid);
+    }
+
+    // Not an object (array at root) — should fail gracefully
+    {
+        const char* json = R"([1,2,3])";
+        MCPMessage msg = parse_mcp_json(json, strlen(json));
+
+        assert_eq("Root array: valid is false", !msg.valid);
+    }
+}
+
+// =============================================================================
 // TEST 10: PERFORMANCE BENCHMARK
 // =============================================================================
 
@@ -300,10 +381,6 @@ void test_performance() {
 }
 int main()
 {
-    //MCPAdapter mcpAdapter;// = new MCPAdapter();
-    //mcpAdapter.init();
-    //mcpAdapter.run();
-
     test_parse_initialize_request();
     test_parse_tools_list();
     test_parse_response_result();
@@ -313,6 +390,7 @@ int main()
     test_build_error();
     test_round_trip();
     test_array_building();
+    test_parse_generic_json();
     test_performance();
 }
 

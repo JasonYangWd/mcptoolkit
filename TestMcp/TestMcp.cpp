@@ -1,9 +1,11 @@
 // TestMcp.cpp : This file contains the 'main' function. Program execution begins and ends there.
 //
 #include <iostream>
+#include <sstream>
 #include <chrono>
 #include "json_parser.h"
 #include "json_builder.h"
+#include "mcp_adapter.h"
 
 using namespace mcptoolkit;
 
@@ -379,8 +381,232 @@ void test_performance() {
         assert_eq("Build < 50µs per msg", per_msg < 50);
     }
 }
-int main()
-{
+// =============================================================================
+// MCP ADAPTER TEST INFRASTRUCTURE
+// =============================================================================
+
+// Minimal subclass that exposes one "echo" tool and records what was called.
+class TestServer : public MCPAdapter {
+public:
+    std::string last_tool_name;
+    std::string last_tool_args;
+
+protected:
+    std::vector<ToolDefinition> list_tools() override {
+        return {{
+            "echo",
+            "Echoes back the input",
+            {{ "text", "string", "Text to echo", /*required=*/true }}
+        }};
+    }
+
+    ToolResult call_tool(const std::string& name,
+                         const std::string& args_json) override {
+        last_tool_name = name;
+        last_tool_args = args_json;
+        if (name == "echo") return {"hello from echo"};
+        return {"unknown tool", /*is_error=*/true};
+    }
+};
+
+// Run an adapter against a block of newline-delimited JSON input.
+// Returns everything the adapter wrote to stdout.
+static std::string run_adapter(MCPAdapter& adapter, const std::string& input) {
+    std::istringstream in(input);
+    std::ostringstream out;
+    std::streambuf* old_cin  = std::cin.rdbuf(in.rdbuf());
+    std::streambuf* old_cout = std::cout.rdbuf(out.rdbuf());
+    adapter.run();
+    std::cin.rdbuf(old_cin);
+    std::cout.rdbuf(old_cout);
+    return out.str();
+}
+
+// =============================================================================
+// TEST A1: initialize
+// =============================================================================
+
+void test_adapter_initialize() {
+    std::cout << "\n=== TEST A1: initialize handshake ===" << std::endl;
+
+    MCPAdapter adapter;
+    std::string out = run_adapter(adapter,
+        R"({"jsonrpc":"2.0","id":1,"method":"initialize","params":{}})" "\n");
+
+    assert_eq("Response non-empty",        !out.empty());
+    assert_eq("Contains id 1",             out.find("\"id\":1")             != std::string::npos);
+    assert_eq("Contains result",           out.find("\"result\"")           != std::string::npos);
+    assert_eq("Contains protocolVersion",  out.find("protocolVersion")      != std::string::npos);
+    assert_eq("Protocol is 2024-11-05",    out.find("2024-11-05")           != std::string::npos);
+    assert_eq("Contains capabilities",     out.find("capabilities")         != std::string::npos);
+    assert_eq("Contains tools capability", out.find("\"tools\"")            != std::string::npos);
+    assert_eq("Contains serverInfo",       out.find("serverInfo")           != std::string::npos);
+    assert_eq("Server name mcptoolkit",    out.find("mcptoolkit")           != std::string::npos);
+
+    std::cout << "  Response: " << out;
+}
+
+// =============================================================================
+// TEST A2: tools/list — no tools
+// =============================================================================
+
+void test_adapter_tools_list_empty() {
+    std::cout << "\n=== TEST A2: tools/list (no tools) ===" << std::endl;
+
+    MCPAdapter adapter;
+    std::string out = run_adapter(adapter,
+        R"({"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}})" "\n");
+
+    assert_eq("Response non-empty",        !out.empty());
+    assert_eq("Contains id 2",             out.find("\"id\":2")             != std::string::npos);
+    assert_eq("Tools array is empty",      out.find("\"tools\":[]")         != std::string::npos);
+
+    std::cout << "  Response: " << out;
+}
+
+// =============================================================================
+// TEST A3: tools/list — with tools
+// =============================================================================
+
+void test_adapter_tools_list_with_tools() {
+    std::cout << "\n=== TEST A3: tools/list (with tools) ===" << std::endl;
+
+    TestServer server;
+    std::string out = run_adapter(server,
+        R"({"jsonrpc":"2.0","id":3,"method":"tools/list","params":{}})" "\n");
+
+    assert_eq("Response non-empty",        !out.empty());
+    assert_eq("Tool name 'echo'",          out.find("\"echo\"")             != std::string::npos);
+    assert_eq("Tool description present",  out.find("Echoes back")          != std::string::npos);
+    assert_eq("inputSchema present",       out.find("inputSchema")          != std::string::npos);
+    assert_eq("Param 'text' present",      out.find("\"text\"")             != std::string::npos);
+    assert_eq("Required array has 'text'", out.find("\"required\":[\"text\"]") != std::string::npos);
+
+    std::cout << "  Response: " << out;
+}
+
+// =============================================================================
+// TEST A4: tools/call — known tool
+// =============================================================================
+
+void test_adapter_tools_call() {
+    std::cout << "\n=== TEST A4: tools/call (known tool) ===" << std::endl;
+
+    TestServer server;
+    std::string out = run_adapter(server,
+        R"({"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"echo","arguments":{"text":"hello"}}})" "\n");
+
+    assert_eq("Response non-empty",        !out.empty());
+    assert_eq("Contains result",           out.find("\"result\"")           != std::string::npos);
+    assert_eq("Contains content array",    out.find("\"content\"")          != std::string::npos);
+    assert_eq("Result text present",       out.find("hello from echo")      != std::string::npos);
+    assert_eq("isError is false",          out.find("\"isError\":false")    != std::string::npos);
+    assert_eq("Tool name dispatched",      server.last_tool_name == "echo");
+    assert_eq("Arguments forwarded",       server.last_tool_args.find("hello") != std::string::npos);
+
+    std::cout << "  Response: " << out;
+}
+
+// =============================================================================
+// TEST A5: tools/call — unknown tool
+// =============================================================================
+
+void test_adapter_tools_call_unknown() {
+    std::cout << "\n=== TEST A5: tools/call (unknown tool) ===" << std::endl;
+
+    TestServer server;
+    std::string out = run_adapter(server,
+        R"({"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"name":"no_such","arguments":{}}})" "\n");
+
+    assert_eq("Response non-empty",        !out.empty());
+    assert_eq("isError is true",           out.find("\"isError\":true")     != std::string::npos);
+    assert_eq("Contains 'unknown tool'",   out.find("unknown tool")         != std::string::npos);
+
+    std::cout << "  Response: " << out;
+}
+
+// =============================================================================
+// TEST A6: unknown method
+// =============================================================================
+
+void test_adapter_unknown_method() {
+    std::cout << "\n=== TEST A6: unknown method ===" << std::endl;
+
+    MCPAdapter adapter;
+    std::string out = run_adapter(adapter,
+        R"({"jsonrpc":"2.0","id":6,"method":"resources/list","params":{}})" "\n");
+
+    assert_eq("Response non-empty",        !out.empty());
+    assert_eq("Contains error",            out.find("\"error\"")            != std::string::npos);
+    assert_eq("Error code -32601",         out.find("-32601")               != std::string::npos);
+    assert_eq("Method not found",          out.find("Method not found")     != std::string::npos);
+
+    std::cout << "  Response: " << out;
+}
+
+// =============================================================================
+// TEST A7: malformed JSON
+// =============================================================================
+
+void test_adapter_parse_error() {
+    std::cout << "\n=== TEST A7: malformed JSON ===" << std::endl;
+
+    MCPAdapter adapter;
+    std::string out = run_adapter(adapter, "{bad json\n");
+
+    assert_eq("Response non-empty",        !out.empty());
+    assert_eq("Contains error",            out.find("\"error\"")            != std::string::npos);
+    assert_eq("Parse error code -32700",   out.find("-32700")               != std::string::npos);
+
+    std::cout << "  Response: " << out;
+}
+
+// =============================================================================
+// TEST A8: notification yields no response
+// =============================================================================
+
+void test_adapter_notification_no_response() {
+    std::cout << "\n=== TEST A8: notification yields no response ===" << std::endl;
+
+    MCPAdapter adapter;
+    std::string out = run_adapter(adapter,
+        R"({"jsonrpc":"2.0","method":"notifications/initialized"})" "\n");
+
+    assert_eq("No response emitted",       out.empty());
+}
+
+// =============================================================================
+// TEST A9: multiple messages in one session
+// =============================================================================
+
+void test_adapter_multiple_messages() {
+    std::cout << "\n=== TEST A9: multiple messages in sequence ===" << std::endl;
+
+    TestServer server;
+    std::string input =
+        R"({"jsonrpc":"2.0","id":1,"method":"initialize","params":{}})"    "\n"
+        R"({"jsonrpc":"2.0","method":"notifications/initialized"})"         "\n"
+        R"({"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}})"    "\n";
+
+    std::string out = run_adapter(server, input);
+
+    // Count lines of output — each response is one line
+    size_t lines = 0;
+    for (char c : out) if (c == '\n') ++lines;
+
+    assert_eq("Two response lines",            lines == 2);
+    assert_eq("initialize response present",   out.find("protocolVersion")  != std::string::npos);
+    assert_eq("tools/list response present",   out.find("\"tools\"")        != std::string::npos);
+
+    std::cout << "  Output lines: " << lines << std::endl;
+}
+
+// =============================================================================
+// TEST RUNNER
+// =============================================================================
+
+void RunParserTests() {
+
     test_parse_initialize_request();
     test_parse_tools_list();
     test_parse_response_result();
@@ -392,6 +618,24 @@ int main()
     test_array_building();
     test_parse_generic_json();
     test_performance();
+}
+void RunAdapterTests() {
+
+    test_adapter_initialize();
+    test_adapter_tools_list_empty();
+    test_adapter_tools_list_with_tools();
+    test_adapter_tools_call();
+    test_adapter_tools_call_unknown();
+    test_adapter_unknown_method();
+    test_adapter_parse_error();
+    test_adapter_notification_no_response();
+    test_adapter_multiple_messages();
+}
+int main()
+{
+    // RunParserTests();
+    RunAdapterTests();
+    std::cout << "\n" << pass_count << "/" << test_count << " tests passed\n";
 }
 
 // Run program: Ctrl + F5 or Debug > Start Without Debugging menu

@@ -1,0 +1,24 @@
+# IDE files
+.vs/
+.vscode/
+*.vcxproj.user
+*.vcxproj.filters
+
+# Build artifacts
+x64/
+bin/
+Debug/
+Release/
+*.dll
+*.exe
+*.lib
+*.obj
+*.pch
+
+# Temporary files
+*.tmp.*
+*.recipe
+
+# OS files
+.DS_Store
+Thumbs.db

@@ -1,5 +1,7 @@
 # mcptoolkit
 
+> **Last updated:** April 2, 2026
+
 A C++ library for parsing and building [JSON-RPC 2.0](https://www.jsonrpc.org/specification) / [Model Context Protocol (MCP)](https://modelcontextprotocol.io) messages. Designed for high performance with a zero-copy parser and a lightweight message builder.
 
 ## Features
@@ -199,6 +201,10 @@ build\Debug\testmcp    # Windows
 ```
 
 The test suite covers request parsing, response parsing, error responses, complex parameters, message building, round-trip parse+build, array construction, and a performance benchmark (target: <100 µs/parse, <50 µs/build).
+
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for release notes, planned features, and version history.
 
 ## Known Limitations (v0.1)
 

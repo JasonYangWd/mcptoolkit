@@ -68,8 +68,11 @@ private:
     void send_response(int id, const std::string& result_json);
     void send_error(int id, int code, const char* message);
 
-    // Extract a quoted-string value by key from a flat JSON object span.
-    static std::string extract_string(const char* json, size_t len, const char* key);
+    // Extract a quoted-string value by key from a JSON object span.
+    // Returns the string content as a zero-copy span into the input buffer.
+    // out_start and out_len receive the pointer and length (content only, no quotes).
+    static bool extract_string(const char* json, size_t len, const char* key,
+                               const char*& out_start, size_t& out_len);
 
     // Locate the raw value span for a key in a JSON object (handles nested).
     static bool extract_value_span(const char* json, size_t len, const char* key,

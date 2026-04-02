@@ -36,17 +36,20 @@ void MCPAdapter::run() {
 void MCPAdapter::dispatch(const MCPMessage& msg) {
     if (!msg.is_request) return;  // ignore bare responses we didn't expect
 
-    std::string method(msg.method, msg.method_len);
-
     // Notifications (no id) — handle silently, never send a response
     if (msg.id == -1) {
         // "notifications/initialized" signals the client finished its init
         return;
     }
 
-    if (method == "initialize")  { handle_initialize(msg);  return; }
-    if (method == "tools/list")  { handle_tools_list(msg);  return; }
-    if (method == "tools/call")  { handle_tools_call(msg);  return; }
+    // Compare method without allocating — direct memcmp on the parsed span
+    auto method_is = [&](const char* s, size_t slen) {
+        return msg.method_len == slen && std::memcmp(msg.method, s, slen) == 0;
+    };
+
+    if (method_is("initialize", 10))  { handle_initialize(msg);  return; }
+    if (method_is("tools/list", 10))  { handle_tools_list(msg);  return; }
+    if (method_is("tools/call", 10))  { handle_tools_call(msg);  return; }
 
     send_error(msg.id, -32601, "Method not found");
 }
@@ -134,8 +137,11 @@ void MCPAdapter::handle_tools_call(const MCPMessage& msg) {
         return;
     }
 
-    std::string name = extract_string(msg.params_start, msg.params_len, "name");
-    if (name.empty()) {
+    // Extract tool name as a zero-copy span
+    const char* name_ptr = nullptr;
+    size_t      name_len = 0;
+    if (!extract_string(msg.params_start, msg.params_len, "name", name_ptr, name_len)
+        || name_len == 0) {
         send_error(msg.id, -32602, "Missing tool name");
         return;
     }
@@ -149,7 +155,8 @@ void MCPAdapter::handle_tools_call(const MCPMessage& msg) {
         args_json.assign(args_start, args_len);
     }
 
-    ToolResult result = call_tool(name, args_json);
+    // One copy at the virtual boundary (call_tool interface takes std::string)
+    ToolResult result = call_tool(std::string(name_ptr, name_len), args_json);
 
     // Build: {"jsonrpc":"2.0","id":<n>,"result":{"content":[{"type":"text","text":"..."}],"isError":<bool>}}
     JsonBuilder cb;
@@ -207,48 +214,104 @@ void MCPAdapter::send_error(int id, int code, const char* message) {
 // JSON extraction helpers
 // =============================================================================
 
-// Find "key":"<value>" in a JSON object span and return the unescaped value.
-std::string MCPAdapter::extract_string(const char* json, size_t len, const char* key) {
-    std::string needle = std::string("\"") + key + "\"";
+// Find "key":"<value>" in a JSON object span and return the string content as a zero-copy span.
+// out_start and out_len receive the pointer and length (content only, no quotes).
+// Returns false if key not found or malformed.
+bool MCPAdapter::extract_string(const char* json, size_t len, const char* key,
+                                const char*& out_start, size_t& out_len) {
+    out_start = nullptr;
+    out_len = 0;
+
     const char* p   = json;
     const char* end = json + len;
+    size_t key_len = std::strlen(key);
 
     while (p < end) {
-        const char* found = std::search(p, end,
-                                        needle.c_str(), needle.c_str() + needle.size());
-        if (found == end) break;
-        p = found + needle.size();
+        // Find opening quote of the key
+        const char* quote = static_cast<const char*>(std::memchr(p, '"', static_cast<size_t>(end - p)));
+        if (!quote) break;
 
-        // skip whitespace then ':'
-        while (p < end && (*p == ' ' || *p == '\t' || *p == '\n' || *p == '\r')) ++p;
-        if (p >= end || *p != ':') continue;
-        ++p;
-        while (p < end && (*p == ' ' || *p == '\t' || *p == '\n' || *p == '\r')) ++p;
+        p = quote + 1;
+        if (p + key_len + 1 > end) break;  // not enough space for key + closing quote
 
-        if (p >= end || *p != '"') continue;
-        ++p;  // skip opening quote
-
-        std::string value;
-        while (p < end && *p != '"') {
-            if (*p == '\\' && p + 1 < end) ++p;  // minimal unescape: skip backslash
-            value += *p++;
+        // Check if this quote is followed by the key
+        if (std::memcmp(p, key, key_len) != 0) {
+            p = quote + 1;
+            continue;
         }
-        return value;
+
+        p += key_len;
+        if (p >= end || *p != '"') {
+            p = quote + 1;
+            continue;  // not the right key
+        }
+        ++p;  // skip closing quote of key
+
+        // Skip whitespace
+        while (p < end && (*p == ' ' || *p == '\t' || *p == '\n' || *p == '\r')) ++p;
+        if (p >= end || *p != ':') {
+            p = quote + 1;
+            continue;
+        }
+        ++p;  // skip ':'
+
+        // Skip whitespace
+        while (p < end && (*p == ' ' || *p == '\t' || *p == '\n' || *p == '\r')) ++p;
+        if (p >= end || *p != '"') {
+            p = quote + 1;
+            continue;
+        }
+        ++p;  // skip opening quote of value
+
+        // Record the value start (content, no quotes)
+        out_start = p;
+
+        // Scan to closing quote, handling escapes
+        while (p < end && *p != '"') {
+            if (*p == '\\' && p + 1 < end) ++p;  // skip escape lead and next char
+            ++p;
+        }
+        if (p >= end) {
+            out_start = nullptr;
+            out_len = 0;
+            return false;  // no closing quote
+        }
+
+        out_len = static_cast<size_t>(p - out_start);
+        return true;
     }
-    return {};
+    return false;
 }
 
 // Locate the raw value span for "key" inside a JSON object, handling nesting.
 bool MCPAdapter::extract_value_span(const char* json, size_t len, const char* key,
                                     const char** out_start, size_t* out_len) {
-    std::string needle = std::string("\"") + key + "\"";
     const char* p   = json;
     const char* end = json + len;
+    size_t key_len = std::strlen(key);
 
-    const char* found = std::search(p, end,
-                                    needle.c_str(), needle.c_str() + needle.size());
-    if (found == end) return false;
-    p = found + needle.size();
+    // Find the key in the JSON — scan for "key":
+    while (p < end) {
+        const char* quote = static_cast<const char*>(std::memchr(p, '"', static_cast<size_t>(end - p)));
+        if (!quote) return false;
+
+        p = quote + 1;
+        if (p + key_len + 1 > end) return false;
+
+        if (std::memcmp(p, key, key_len) != 0) {
+            p = quote + 1;
+            continue;
+        }
+
+        p += key_len;
+        if (p >= end || *p != '"') {
+            p = quote + 1;
+            continue;
+        }
+        ++p;  // skip closing quote of key
+        break;  // found the key
+    }
+    if (p >= end) return false;
 
     while (p < end && (*p == ' ' || *p == '\t' || *p == '\n' || *p == '\r')) ++p;
     if (p >= end || *p != ':') return false;

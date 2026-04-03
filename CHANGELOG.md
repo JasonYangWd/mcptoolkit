@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added (Post 0.1.0 - April 3, 2026)
+- **Comprehensive test suite expansion** (119 total assertions)
+  - TEST 12: Invalid JSON string handling with 13 edge cases
+  - Validates parser's lenient design behavior
+  - Tests: unterminated strings/objects, escape sequences, trailing commas, leading zeros, etc.
+  
+- **Makefile fix**
+  - Added missing `json_parser.cpp` and `json_builder.cpp` to library build
+  - Both source files now properly compiled into `libmcptoolkit.a`
+
+### Verified Performance (April 3, 2026)
+- Parser: ~0.19µs per JSON-RPC message (1000-message benchmark)
+- Builder: ~0.12µs per response construction
+- Both well under 100µs target for zero-copy design
+
 ### Planned for v0.2
 - Input size limit enforcement (`MAX_MESSAGE_BYTES` inside `parse()`)
 - `std::optional<int>` for ID field (fix JSON-RPC -1 sentinel issue)

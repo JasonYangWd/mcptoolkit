@@ -250,3 +250,13 @@ See [CHANGELOG.md](CHANGELOG.md) for release notes, planned features, and versio
 - The `id` field is stored as `int`; `-1` is used as a sentinel for absent IDs, so JSON-RPC messages with `"id": -1` are treated as notifications. (v0.2: will use `std::optional<int>`)
 - No input size limit — callers should validate message length before parsing untrusted input. (v0.2: will enforce `MAX_MESSAGE_BYTES` inside `parse()`)
 - `MCPAdapter` supports only stdio transport. TLS/mTLS and binary framing planned for v0.2.
+
+## Follow & Learn More
+
+For MCP security research, threat analysis, and architecture deep-dives, subscribe to **[The Secure MCP](https://thesecuremcp.substack.com/)** on Substack.
+
+---
+
+**Author:** Jason Yang  
+**License:** See LICENSE file  
+**Issues & Feedback:** [GitHub Issues](https://github.com/JasonYangWd/mcptoolkit/issues)

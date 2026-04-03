@@ -238,7 +238,38 @@ Build 1000 responses: 119µs total  (~0.12µs/msg) ✓
 Both well under target: <100µs parse, <50µs build
 ```
 
-**All 119 tests passing.**
+**All 161 tests passing** (including 13 security vulnerability tests).
+
+---
+
+## Security Analysis
+
+For comprehensive vulnerability analysis, mitigation strategies, and real-world attack scenarios:
+
+- **[JSON_VULNERABILITIES.md](JSON_VULNERABILITIES.md)** — In-depth analysis of 6 common vulnerability classes + 3 emerging threats
+  - Denial of Service (nesting, expansion)
+  - Integer overflow & numeric precision
+  - Escape sequence injection
+  - Buffer overflow prevention
+  - Type confusion & coercion
+  - Zero-copy safety contract
+  
+- **[SECURITY_TEST_COVERAGE.md](SECURITY_TEST_COVERAGE.md)** — Test coverage matrix
+  - 13 security test functions (S1-S13)
+  - 161/162 assertions passing
+  - Real-world attack scenarios validated
+  - Mitigation checklist
+
+- **[BLOG_TOPICS.md](BLOG_TOPICS.md)** — 8-10 post blog series outline
+  - "Why Depth Limits Matter"
+  - "The ID Sentinel Problem"
+  - "Zero-Copy Parsing Trade-offs"
+  - "Builder Safety & Injection Prevention"
+  - And more...
+
+**Key Finding:** mcptoolkit demonstrates zero-copy parsing **does not sacrifice security**. All 6 primary vulnerability classes are mitigated or documented as by-design trade-offs.
+
+---
 
 ## Changelog
 
@@ -253,10 +284,42 @@ See [CHANGELOG.md](CHANGELOG.md) for release notes, planned features, and versio
 
 ## Follow & Learn More
 
-For MCP security research, threat analysis, and architecture deep-dives, subscribe to **[The Secure MCP](https://thesecuremcp.substack.com/)** on Substack.
+### Read the Security Research
+
+Start with **[JSON_VULNERABILITIES.md](JSON_VULNERABILITIES.md)** for a deep dive into:
+- Real-world CVE examples (Ruby JSON, Apache Commons, PHP, Python, Jenkins)
+- MCP-specific attack scenarios with proof-of-concept code
+- Mitigation patterns and implementation comparison
+- Developer security checklist (12 items)
+
+Then explore **[SECURITY_TEST_COVERAGE.md](SECURITY_TEST_COVERAGE.md)** to see:
+- How mcptoolkit mitigates each vulnerability class
+- Test evidence for every claim
+- Gap analysis and recommendations
+- Blog topic priorities
+
+### Subscribe to The Secure MCP
+
+For weekly deep-dives on MCP security, JSON vulnerabilities, and protocol design:
+
+**[The Secure MCP on Substack](https://thesecuremcp.substack.com/)**
+
+Topics covered:
+1. Common JSON Vulnerabilities: 6 Threat Classes
+2. Why Depth Limits Matter: Stack Overflow Prevention
+3. The ID Sentinel Problem: Protocol Correctness Issues
+4. Escape Sequences & DoS: Lenient Parsing Trade-offs
+5. Zero-Copy Security: The Buffer Lifetime Contract
+6. DoS Resistance: Linear vs Quadratic Parsing Performance
+7. Builder Safety: Escaping as Defense-in-Depth
+8. Protocol Boundary Validation Patterns
+9. Buffer Bounds: Why Span-Based APIs Win
+10. mcptoolkit Case Study: Secure JSON Design
 
 ---
 
 **Author:** Jason Yang  
+**Email:** [jasonyangwd@gmail.com](mailto:jasonyangwd@gmail.com)  
 **License:** See LICENSE file  
-**Issues & Feedback:** [GitHub Issues](https://github.com/JasonYangWd/mcptoolkit/issues)
+**Issues & Feedback:** [GitHub Issues](https://github.com/JasonYangWd/mcptoolkit/issues)  
+**Security Issues:** See [JSON_VULNERABILITIES.md](JSON_VULNERABILITIES.md) for responsible disclosure

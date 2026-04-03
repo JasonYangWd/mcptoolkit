@@ -605,6 +605,105 @@ void test_adapter_multiple_messages() {
 // TEST RUNNER
 // =============================================================================
 
+// =============================================================================
+// TEST 12: INVALID JSON STRINGS
+// =============================================================================
+
+void test_invalid_json_strings() {
+    std::cout << "\n=== TEST 12: Invalid JSON Strings ===" << std::endl;
+
+    // Unterminated string
+    {
+        const char* json = R"({"key": "unterminated)";
+        MCPMessage msg = parse_mcp_json(json, strlen(json));
+        assert_eq("Unterminated string: invalid", !msg.valid);
+    }
+
+    // Unterminated object
+    {
+        const char* json = R"({"key": "value")";
+        MCPMessage msg = parse_mcp_json(json, strlen(json));
+        assert_eq("Unterminated object: invalid", !msg.valid);
+    }
+
+    // Invalid escape sequence (parser is lenient — accepts any escape)
+    {
+        const char* json = R"({"key": "bad\x escape"})";
+        MCPMessage msg = parse_mcp_json(json, strlen(json));
+        assert_eq("Invalid escape: parser is lenient", msg.valid);
+    }
+
+    // Trailing comma in object (parser is lenient — accepts trailing commas)
+    {
+        const char* json = R"({"key": "value",})";
+        MCPMessage msg = parse_mcp_json(json, strlen(json));
+        assert_eq("Trailing comma: parser is lenient", msg.valid);
+    }
+
+    // Single quotes instead of double quotes
+    {
+        const char* json = "{'key': 'value'}";
+        MCPMessage msg = parse_mcp_json(json, strlen(json));
+        assert_eq("Single quotes: invalid", !msg.valid);
+    }
+
+    // Missing colon
+    {
+        const char* json = R"({"key" "value"})";
+        MCPMessage msg = parse_mcp_json(json, strlen(json));
+        assert_eq("Missing colon: invalid", !msg.valid);
+    }
+
+    // Invalid number (parser accepts leading zeros)
+    {
+        const char* json = R"({"id": 01234})";
+        MCPMessage msg = parse_mcp_json(json, strlen(json));
+        assert_eq("Leading zero number: parser is lenient", msg.valid);
+    }
+
+    // Duplicate keys (should parse but might be implementation-dependent)
+    {
+        const char* json = R"({"id": 1, "id": 2})";
+        MCPMessage msg = parse_mcp_json(json, strlen(json));
+        assert_eq("Duplicate keys: valid (implementation-dependent)", msg.valid);
+    }
+
+    // Empty string input
+    {
+        MCPMessage msg = parse_mcp_json("", 0);
+        assert_eq("Empty string: invalid", !msg.valid);
+    }
+
+    // Null pointer with zero length
+    {
+        MCPMessage msg = MCPMessage::parse(nullptr, 0);
+        assert_eq("Null pointer: invalid", !msg.valid);
+    }
+
+    // Random garbage
+    {
+        const char* json = "!@#$%^&*()";
+        MCPMessage msg = parse_mcp_json(json, strlen(json));
+        assert_eq("Random garbage: invalid", !msg.valid);
+    }
+
+    // Root array instead of object
+    {
+        const char* json = R"([1, 2, 3])";
+        MCPMessage msg = parse_mcp_json(json, strlen(json));
+        assert_eq("Root array: invalid", !msg.valid);
+    }
+
+    // Root primitive instead of object
+    {
+        const char* json = "123";
+        MCPMessage msg = parse_mcp_json(json, strlen(json));
+        assert_eq("Root number: invalid", !msg.valid);
+    }
+
+    std::cout << "  Invalid JSON tests completed" << std::endl;
+}
+
 void RunParserTests() {
 
     test_parse_initialize_request();
@@ -618,6 +717,7 @@ void RunParserTests() {
     test_array_building();
     test_parse_generic_json();
     test_performance();
+    test_invalid_json_strings();
 }
 void RunAdapterTests() {
 
@@ -633,7 +733,7 @@ void RunAdapterTests() {
 }
 int main()
 {
-    // RunParserTests();
+    RunParserTests();
     RunAdapterTests();
     std::cout << "\n" << pass_count << "/" << test_count << " tests passed\n";
 }

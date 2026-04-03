@@ -14,6 +14,8 @@ BUILD_DIR := build
 # mcptoolkit static library
 # ---------------------------------------------------------------------------
 LIB_SRCS := mcptoolkit/src/json/json_msg.cpp \
+            mcptoolkit/src/json/json_parser.cpp \
+            mcptoolkit/src/json/json_builder.cpp \
             mcptoolkit/src/mcp_adapter.cpp
 
 LIB_OBJS := $(patsubst mcptoolkit/src/%.cpp, $(BUILD_DIR)/lib/%.o, $(LIB_SRCS))

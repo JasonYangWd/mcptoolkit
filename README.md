@@ -22,7 +22,7 @@ std::string method(msg.method, msg.method_len);
 int id = msg.id;
 ```
 
-See [API.md](API.md) for complete usage examples.
+See [API.md](notes/API.md) for complete usage examples.
 
 ---
 
@@ -34,12 +34,12 @@ See [API.md](API.md) for complete usage examples.
 - [Quick Example](#quick-example)
 
 ### Documentation
-- **[API.md](API.md)** — Usage examples and API reference
-- **[TEST_RESULTS.md](TEST_RESULTS.md)** — Comprehensive test coverage (161/162 passing)
+- **[notes/API.md](notes/API.md)** — Usage examples and API reference
+- **[notes/TEST_RESULTS.md](notes/TEST_RESULTS.md)** — Comprehensive test coverage (161/162 passing)
 
 ### Security
-- **[JSON_VULNERABILITIES.md](JSON_VULNERABILITIES.md)** — Threat analysis (6 vulnerability classes + emerging risks)
-- **[SECURITY_TEST_COVERAGE.md](SECURITY_TEST_COVERAGE.md)** — Test evidence for security claims
+- **[notes/JSON_VULNERABILITIES.md](notes/JSON_VULNERABILITIES.md)** — Threat analysis (6 vulnerability classes + emerging risks)
+- **[notes/SECURITY_TEST_COVERAGE.md](notes/SECURITY_TEST_COVERAGE.md)** — Test evidence for security claims
 
 ### Project Info
 - [Repository Layout](#repository-layout)
@@ -235,8 +235,8 @@ mcptoolkit is tested against 6 vulnerability classes + 3 emerging threats:
 - ✅ **Expansion DoS** — Linear parsing, no expansion vulnerabilities
 - ✅ **Malformed Input** — Parser never crashes
 
-See **[JSON_VULNERABILITIES.md](JSON_VULNERABILITIES.md)** for comprehensive threat analysis.  
-See **[SECURITY_TEST_COVERAGE.md](SECURITY_TEST_COVERAGE.md)** for test evidence.
+See **[notes/JSON_VULNERABILITIES.md](notes/JSON_VULNERABILITIES.md)** for comprehensive threat analysis.  
+See **[notes/SECURITY_TEST_COVERAGE.md](notes/SECURITY_TEST_COVERAGE.md)** for test evidence.
 
 ---
 
@@ -255,8 +255,8 @@ See **[SECURITY_TEST_COVERAGE.md](SECURITY_TEST_COVERAGE.md)** for test evidence
 |---|---|
 | **[API.md](API.md)** | Usage examples, API reference, headers to include |
 | **[TEST_RESULTS.md](TEST_RESULTS.md)** | Test breakdown, performance metrics, coverage matrix |
-| **[JSON_VULNERABILITIES.md](JSON_VULNERABILITIES.md)** | Threat analysis, CVE examples, real-world scenarios |
-| **[SECURITY_TEST_COVERAGE.md](SECURITY_TEST_COVERAGE.md)** | Test evidence, vulnerability mapping, gap analysis |
+| **[notes/JSON_VULNERABILITIES.md](notes/JSON_VULNERABILITIES.md)** | Threat analysis, CVE examples, real-world scenarios |
+| **[notes/SECURITY_TEST_COVERAGE.md](notes/SECURITY_TEST_COVERAGE.md)** | Test evidence, vulnerability mapping, gap analysis |
 | **[CHANGELOG.md](CHANGELOG.md)** | Release notes, version history, roadmap |
 
 ---
@@ -270,7 +270,7 @@ See **[SECURITY_TEST_COVERAGE.md](SECURITY_TEST_COVERAGE.md)** for test evidence
 ### Issues & Feedback
 
 - **Bug Reports:** [GitHub Issues](https://github.com/JasonYangWd/mcptoolkit/issues)
-- **Security Issues:** See [JSON_VULNERABILITIES.md](JSON_VULNERABILITIES.md) for responsible disclosure
+- **Security Issues:** See [notes/JSON_VULNERABILITIES.md](notes/JSON_VULNERABILITIES.md) for responsible disclosure
 
 ### Subscribe to The Secure MCP
 
@@ -291,4 +291,4 @@ Read the vulnerability analysis and security test evidence in this repository, t
 
 ---
 
-**[→ View API Documentation](API.md) | [→ View Test Results](TEST_RESULTS.md) | [→ Read Security Analysis](JSON_VULNERABILITIES.md)**
+**[→ View API Documentation](notes/API.md) | [→ View Test Results](notes/TEST_RESULTS.md) | [→ Read Security Analysis](notes/JSON_VULNERABILITIES.md)**

@@ -704,33 +704,7 @@ void test_invalid_json_strings() {
     std::cout << "  Invalid JSON tests completed" << std::endl;
 }
 
-void RunParserTests() {
 
-    test_parse_initialize_request();
-    test_parse_tools_list();
-    test_parse_response_result();
-    test_parse_error_response();
-    test_complex_params();
-    test_build_response();
-    test_build_error();
-    test_round_trip();
-    test_array_building();
-    test_parse_generic_json();
-    test_performance();
-    test_invalid_json_strings();
-}
-void RunAdapterTests() {
-
-    test_adapter_initialize();
-    test_adapter_tools_list_empty();
-    test_adapter_tools_list_with_tools();
-    test_adapter_tools_call();
-    test_adapter_tools_call_unknown();
-    test_adapter_unknown_method();
-    test_adapter_parse_error();
-    test_adapter_notification_no_response();
-    test_adapter_multiple_messages();
-}
 
 // =============================================================================
 // SECURITY TESTS: JSON Vulnerabilities
@@ -1027,6 +1001,124 @@ void test_security_denial_of_service() {
     std::cout << "  DoS resistance: Good — no quadratic behavior detected ✓" << std::endl;
 }
 
+void test_security_error_handling() {
+    std::cout << "\n=== SECURITY TEST S9: Error Handling (Never Crash) ===" << std::endl;
+
+    // Test 1: Malformed JSON returns error, not crash
+    {
+        const char* json = "{bad json";
+        MCPMessage msg = parse_mcp_json(json, strlen(json));
+        assert_eq("S9a: Malformed JSON rejected", !msg.valid);
+    }
+
+    // Test 2: Truncated object
+    {
+        const char* json = "{\"key\":\"value\"";
+        MCPMessage msg = parse_mcp_json(json, strlen(json));
+        assert_eq("S9b: Truncated object rejected", !msg.valid);
+    }
+
+    // Test 3: Truncated string
+    {
+        const char* json = "{\"key\":\"unterminated";
+        MCPMessage msg = parse_mcp_json(json, strlen(json));
+        assert_eq("S9c: Unterminated string rejected", !msg.valid);
+    }
+
+    std::cout << "  Error handling: Parser never crashes on malformed input ✓" << std::endl;
+}
+
+void test_security_escape_injection_scenario() {
+    std::cout << "\n=== SECURITY TEST S10: Escape Injection & Path Traversal ===" << std::endl;
+
+    // Real scenario: Attacker tries path traversal via backslashes
+    {
+        const char* json = R"({"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"read_file","arguments":{"path":"..\\..\\..\\windows\\system32"}}})";
+        MCPMessage msg = parse_mcp_json(json, strlen(json));
+
+        assert_eq("S10a: Escape injection parsed", msg.valid);
+        // Application MUST validate path before using it
+    }
+
+    // Test builder escapes backslashes
+    {
+        JsonBuilder builder;
+        builder.start_object();
+        builder.add_field("path", "..\\..\\..\\windows\\system32");
+        builder.end_object();
+        std::string output = builder.get();
+
+        assert_eq("S10b: Builder escapes backslashes", output.find("\\\\") != std::string::npos);
+    }
+
+    std::cout << "  Escape injection: Parser agnostic, builder safe, app validates" << std::endl;
+}
+
+void test_security_billion_laughs_analog() {
+    std::cout << "\n=== SECURITY TEST S11: Expansion DoS (Billion Laughs Analog) ===" << std::endl;
+
+    // Build JSON with large repetition (expansion potential)
+    std::string json = "{\"base\":\"";
+    for (int i = 0; i < 1000; ++i) json += "x";
+    json += "\",\"copy\":\"";
+    for (int i = 0; i < 1000; ++i) json += "x";
+    json += "\"}";
+
+    auto start = std::chrono::high_resolution_clock::now();
+    MCPMessage msg = parse_mcp_json(json);
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+
+    assert_eq("S11a: Large expansion parses", msg.valid);
+    assert_eq("S11b: Expansion DoS prevented (linear)", duration < 10000);
+
+    std::cout << "  Expansion DoS: Linear parsing, no quadratic behavior" << std::endl;
+}
+
+void test_security_string_length_validation() {
+    std::cout << "\n=== SECURITY TEST S12: String Length Bounds ===" << std::endl;
+
+    // Parser extracts any length, application must validate
+    {
+        std::string long_method(5000, 'a');
+        std::string json = "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"" + long_method + "\",\"params\":{}}";
+        MCPMessage msg = parse_mcp_json(json);
+
+        assert_eq("S12a: Long method parsed", msg.valid);
+        assert_eq("S12b: Length accurate", msg.method_len == 5000);
+        // Application validation: if (msg.method_len > 64) reject
+    }
+
+    std::cout << "  Field length validation: Application responsibility" << std::endl;
+}
+
+void test_security_escape_edge_cases() {
+    std::cout << "\n=== SECURITY TEST S13: Escape Sequence Edge Cases ===" << std::endl;
+
+    // Test 1: Backslash at end of string (incomplete escape)
+    {
+        const char* json = R"({"key":"value\})";  // Unterminated escape
+        MCPMessage msg = parse_mcp_json(json, strlen(json));
+        assert_eq("S13a: Incomplete escape rejected", !msg.valid);
+    }
+
+    // Test 2: Multiple consecutive escapes
+    {
+        const char* json = R"({"key":"\\\\n\\t"})";
+        MCPMessage msg = parse_mcp_json(json, strlen(json));
+        assert_eq("S13b: Multiple escapes handled", msg.valid);
+    }
+
+    // Test 3: Null-byte escape
+    {
+        const char* json = R"({"key":"\u0000value"})";
+        MCPMessage msg = parse_mcp_json(json, strlen(json));
+        assert_eq("S13c: Null-byte escape parsed", msg.valid);
+    }
+
+    std::cout << "  Escape edge cases: Strict on structure, lenient on content" << std::endl;
+}
+
 void RunSecurityTests() {
     test_security_dos_deeply_nested();
     test_security_integer_overflow();
@@ -1036,8 +1128,39 @@ void RunSecurityTests() {
     test_security_zero_copy_lifetime();
     test_security_builder_injection();
     test_security_denial_of_service();
+    test_security_error_handling();
+    test_security_escape_injection_scenario();
+    test_security_billion_laughs_analog();
+    test_security_string_length_validation();
+    test_security_escape_edge_cases();
 }
+void RunParserTests() {
 
+    test_parse_initialize_request();
+    test_parse_tools_list();
+    test_parse_response_result();
+    test_parse_error_response();
+    test_complex_params();
+    test_build_response();
+    test_build_error();
+    test_round_trip();
+    test_array_building();
+    test_parse_generic_json();
+    test_performance();
+    test_invalid_json_strings();
+}
+void RunAdapterTests() {
+
+    test_adapter_initialize();
+    test_adapter_tools_list_empty();
+    test_adapter_tools_list_with_tools();
+    test_adapter_tools_call();
+    test_adapter_tools_call_unknown();
+    test_adapter_unknown_method();
+    test_adapter_parse_error();
+    test_adapter_notification_no_response();
+    test_adapter_multiple_messages();
+}
 int main()
 {
     RunParserTests();

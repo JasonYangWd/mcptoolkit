@@ -260,13 +260,6 @@ For comprehensive vulnerability analysis, mitigation strategies, and real-world 
   - Real-world attack scenarios validated
   - Mitigation checklist
 
-- **[BLOG_TOPICS.md](BLOG_TOPICS.md)** — 8-10 post blog series outline
-  - "Why Depth Limits Matter"
-  - "The ID Sentinel Problem"
-  - "Zero-Copy Parsing Trade-offs"
-  - "Builder Safety & Injection Prevention"
-  - And more...
-
 **Key Finding:** mcptoolkit demonstrates zero-copy parsing **does not sacrifice security**. All 6 primary vulnerability classes are mitigated or documented as by-design trade-offs.
 
 ---
@@ -296,7 +289,6 @@ Then explore **[SECURITY_TEST_COVERAGE.md](SECURITY_TEST_COVERAGE.md)** to see:
 - How mcptoolkit mitigates each vulnerability class
 - Test evidence for every claim
 - Gap analysis and recommendations
-- Blog topic priorities
 
 ### Subscribe to The Secure MCP
 
@@ -304,17 +296,7 @@ For weekly deep-dives on MCP security, JSON vulnerabilities, and protocol design
 
 **[The Secure MCP on Substack](https://thesecuremcp.substack.com/)**
 
-Topics covered:
-1. Common JSON Vulnerabilities: 6 Threat Classes
-2. Why Depth Limits Matter: Stack Overflow Prevention
-3. The ID Sentinel Problem: Protocol Correctness Issues
-4. Escape Sequences & DoS: Lenient Parsing Trade-offs
-5. Zero-Copy Security: The Buffer Lifetime Contract
-6. DoS Resistance: Linear vs Quadratic Parsing Performance
-7. Builder Safety: Escaping as Defense-in-Depth
-8. Protocol Boundary Validation Patterns
-9. Buffer Bounds: Why Span-Based APIs Win
-10. mcptoolkit Case Study: Secure JSON Design
+Read the vulnerability analysis and security test evidence above, then subscribe for extended discussion and emerging threats in MCP protocol design.
 
 ---
 

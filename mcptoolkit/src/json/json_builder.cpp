@@ -39,7 +39,7 @@ namespace mcptoolkit {
         buffer += buf;
     }
 
-    void JsonBuilder::JsonBuilder::add_field_bool(const char* key, bool value) {
+    void JsonBuilder::add_field_bool(const char* key, bool value) {
         if (!buffer.empty() && buffer.back() != '{') buffer += ',';
         buffer += '"';
         buffer += key;

@@ -139,6 +139,7 @@
     <ClInclude Include="framework.h" />
     <ClInclude Include="include\json\json_builder.h" />
     <ClInclude Include="include\json\json_msg.h" />
+    <ClInclude Include="include\json\json_parser.h" />
     <ClInclude Include="include\mcp_adapter.h" />
     <ClInclude Include="pch.h" />
   </ItemGroup>
@@ -150,7 +151,9 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="src\json\json_builder.cpp" />
     <ClCompile Include="src\json\json_msg.cpp" />
+    <ClCompile Include="src\json\json_parser.cpp" />
     <ClCompile Include="src\mcp_adapter.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

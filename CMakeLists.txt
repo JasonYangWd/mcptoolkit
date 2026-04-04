@@ -15,6 +15,8 @@ option(BUILD_SHARED_LIBS "Build mcptoolkit as a shared library" OFF)
 # ---------------------------------------------------------------------------
 set(TOOLKIT_SOURCES
     mcptoolkit/src/json/json_msg.cpp
+    mcptoolkit/src/json/json_parser.cpp
+    mcptoolkit/src/json/json_builder.cpp
     mcptoolkit/src/mcp_adapter.cpp
     mcptoolkit/dllmain.cpp      # guarded with #ifdef _WIN32 inside
 )

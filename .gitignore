@@ -23,4 +23,9 @@ Release/
 
 # OS files
 .DS_Store
-Thumbs.dbnotes/posts/
+Thumbs.db
+
+# Review & analysis files
+tasks/
+reviews/
+notes/posts/

@@ -5,10 +5,57 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # ---------------------------------------------------------------------------
-# Option: build mcptoolkit as a shared library (DLL on Windows, .so on Linux)
-# Default is static. Enable with: cmake -DBUILD_SHARED_LIBS=ON
+# Options
 # ---------------------------------------------------------------------------
 option(BUILD_SHARED_LIBS "Build mcptoolkit as a shared library" OFF)
+option(ENABLE_SANITIZERS "Enable AddressSanitizer and UndefinedBehaviorSanitizer" OFF)
+option(ENABLE_CLANG_TIDY "Enable clang-tidy static analysis" OFF)
+option(ENABLE_CPPCHECK "Enable cppcheck static analysis" OFF)
+option(ENABLE_CODE_COVERAGE "Enable code coverage analysis" OFF)
+
+# ---------------------------------------------------------------------------
+# Sanitizers (dynamic analysis)
+# ---------------------------------------------------------------------------
+if(ENABLE_SANITIZERS AND CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+    add_compile_options(-fsanitize=address,undefined -fno-omit-frame-pointer)
+    add_link_options(-fsanitize=address,undefined)
+    message(STATUS "Sanitizers enabled: AddressSanitizer + UndefinedBehaviorSanitizer")
+endif()
+
+# ---------------------------------------------------------------------------
+# Code Coverage
+# ---------------------------------------------------------------------------
+if(ENABLE_CODE_COVERAGE AND CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+    add_compile_options(--coverage -fprofile-arcs -ftest-coverage)
+    add_link_options(--coverage)
+    message(STATUS "Code coverage enabled")
+endif()
+
+# ---------------------------------------------------------------------------
+# Clang-Tidy (static analysis)
+# ---------------------------------------------------------------------------
+if(ENABLE_CLANG_TIDY)
+    find_program(CLANG_TIDY_PROGRAM clang-tidy)
+    if(CLANG_TIDY_PROGRAM)
+        set(CMAKE_CXX_CLANG_TIDY "${CLANG_TIDY_PROGRAM}")
+        message(STATUS "clang-tidy enabled for static analysis")
+    else()
+        message(WARNING "clang-tidy requested but not found")
+    endif()
+endif()
+
+# ---------------------------------------------------------------------------
+# Cppcheck (static analysis)
+# ---------------------------------------------------------------------------
+if(ENABLE_CPPCHECK)
+    find_program(CPPCHECK_PROGRAM cppcheck)
+    if(CPPCHECK_PROGRAM)
+        set(CMAKE_CXX_CPPCHECK "${CPPCHECK_PROGRAM}" "--enable=all" "--suppress=missingIncludeSystem")
+        message(STATUS "cppcheck enabled for static analysis")
+    else()
+        message(WARNING "cppcheck requested but not found")
+    endif()
+endif()
 
 # ---------------------------------------------------------------------------
 # mcptoolkit library
@@ -70,3 +117,27 @@ elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     target_compile_options(testmcp PRIVATE -Wall -Wextra)
 endif()
 
+# ---------------------------------------------------------------------------
+# Testing
+# ---------------------------------------------------------------------------
+enable_testing()
+add_test(NAME unit_tests COMMAND testmcp)
+
+# Add custom test targets
+add_custom_target(test-run
+    COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure
+    DEPENDS testmcp
+    COMMENT "Running unit tests..."
+)
+
+add_custom_target(test-dynamic
+    COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --config Debug
+    DEPENDS testmcp
+    COMMENT "Running dynamic tests with sanitizers (rebuild with -DENABLE_SANITIZERS=ON)..."
+)
+
+add_custom_target(test-coverage
+    COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --config Debug
+    COMMENT "Running coverage analysis (rebuild with -DENABLE_CODE_COVERAGE=ON)..."
+    DEPENDS testmcp
+)

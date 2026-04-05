@@ -45,7 +45,6 @@ See [API.md](notes/API.md) for complete usage examples.
 - [Repository Layout](#repository-layout)
 - [Features](#features)
 - [Known Limitations](#known-limitations)
-- [Changelog](#changelog)
 - [Author & Contact](#author--contact)
 
 ---
@@ -257,7 +256,6 @@ See **[notes/SECURITY_TEST_COVERAGE.md](notes/SECURITY_TEST_COVERAGE.md)** for t
 | **[TEST_RESULTS.md](TEST_RESULTS.md)** | Test breakdown, performance metrics, coverage matrix |
 | **[notes/JSON_VULNERABILITIES.md](notes/JSON_VULNERABILITIES.md)** | Threat analysis, CVE examples, real-world scenarios |
 | **[notes/SECURITY_TEST_COVERAGE.md](notes/SECURITY_TEST_COVERAGE.md)** | Test evidence, vulnerability mapping, gap analysis |
-| **[CHANGELOG.md](CHANGELOG.md)** | Release notes, version history, roadmap |
 
 ---
 

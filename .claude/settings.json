@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(g++ -std=c++17 -I./mcptoolkit/include -I./mcptoolkit/include/json -I./mcptoolkit examples/echo-adapter.cpp mcptoolkit/src/json/json_msg.cpp mcptoolkit/src/mcp_adapter.cpp mcptoolkit/pch.cpp -o /tmp/echo-server)",
+      "Bash(cmake -B build)",
+      "Bash(git pull:*)",
+      "Bash(chmod +x /tmp/remove_coauthor.sh)",
+      "Bash(export GIT_EDITOR=/tmp/remove_coauthor.sh)",
+      "Bash(git rebase:*)",
+      "Bash(git rm:*)",
+      "Bash(ls -1 *.md)",
+      "Bash(./testmcp)",
+      "Bash(tee /tmp/test_output.txt)",
+      "Bash(valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes --verbose ./testmcp)",
+      "Bash(valgrind --leak-check=full --show-leak-kinds=all --quiet ./testmcp)",
+      "Bash(valgrind --leak-check=summary --quiet ./testmcp)",
+      "Bash(clang-tidy mcptoolkit/src/json/*.cpp -checks=*,-llvmlibc-*,-modernize-use-nodiscard)",
+      "Bash(ls -lh /media/sf_Shared/TestMcp/notes/posts/*.md)",
+      "Bash(ls /media/sf_Shared/TestMcp/notes/posts/*.md)"
+    ],
+    "additionalDirectories": [
+      "/tmp",
+      "/media/sf_Shared/TestMcp/.git"
+    ]
+  }
+}

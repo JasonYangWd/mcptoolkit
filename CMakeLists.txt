@@ -69,3 +69,4 @@ if(MSVC)
 elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     target_compile_options(testmcp PRIVATE -Wall -Wextra)
 endif()
+

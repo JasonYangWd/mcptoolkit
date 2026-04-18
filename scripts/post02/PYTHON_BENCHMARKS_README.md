@@ -123,17 +123,7 @@ Use these actual results to replace placeholder numbers:
 - Run multiple times for consistency
 - Results vary by Python version and system
 
-## Integration with Post 02
 
-Once you have real numbers:
-
-1. Update `01_DRAFT_POST02.md` with actual measurements
-2. Replace "GC pauses for 50ms" with measured value
-3. Replace "warm vs cold (10ms/100ms)" with actual variance
-4. Update code_evidence_02.txt with benchmark sources
-5. Verify all claims against actual data
-
----
 
 **Status:** Scripts ready for execution
 **Purpose:** Generate real evidence for Post 02 publication

@@ -27,5 +27,6 @@ Thumbs.db
 
 # Review & analysis files
 tasks/
+tasks/posted/
+tasks/drafts/
 reviews/
-notes/posts/

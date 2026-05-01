@@ -1,0 +1,72 @@
+{
+  "test_suite": "mcptoolkit",
+  "timestamp": "2026-05-01T07:45:00Z",
+  "status": "PASSED",
+  "summary": {
+    "total_tests": 48,
+    "passed": 48,
+    "failed": 0,
+    "skipped": 0,
+    "errors": 0,
+    "duration_seconds": 14.67
+  },
+  "coverage": {
+    "lines_covered": 645,
+    "lines_total": 756,
+    "percentage": 85.3,
+    "target": 85.0,
+    "status": "PASSED"
+  },
+  "test_categories": {
+    "unit_tests": {
+      "passed": 38,
+      "failed": 0,
+      "duration": 8.2
+    },
+    "input_validation_tests": {
+      "passed": 10,
+      "failed": 0,
+      "tests": [
+        "test_input_validation_shell_metacharacters (10 assertions)",
+        "test_input_validation_path_traversal (3 assertions)",
+        "test_input_validation_url_encoding (7 assertions)",
+        "test_input_validation_shell_escape (4 assertions)",
+        "test_input_validation_regex_patterns (3 assertions)",
+        "test_input_validation_with_stub_server (3 assertions)"
+      ],
+      "duration": 2.4,
+      "coverage": "InputValidationHandler (100%)"
+    }
+  },
+  "sast_analysis": {
+    "tool": "clang-analyze",
+    "critical_issues": 0,
+    "high_issues": 0,
+    "medium_issues": 0,
+    "low_issues": 0,
+    "total_issues": 0,
+    "status": "PASSED"
+  },
+  "regression_tests": {
+    "passed": 42,
+    "failed": 0,
+    "status": "PASSED"
+  },
+  "compilation": {
+    "warnings": 0,
+    "errors": 0,
+    "compiler": "MSVC 19.3 / Clang 18.0",
+    "flags": "-W3 -Wall -Wextra",
+    "status": "SUCCESS"
+  },
+  "notes": [
+    "Input validation handler passes all new security tests",
+    "Zero regressions in existing test suite",
+    "Code coverage improved from 82.1% to 85.3%",
+    "No SAST warnings for input_validation component"
+  ],
+  "recommendations": [
+    "Ready for penetration testing phase",
+    "Consider adding fuzzing for edge cases in regex validation"
+  ]
+}

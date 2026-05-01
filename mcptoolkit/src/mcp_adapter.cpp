@@ -2,6 +2,7 @@
 #include <iostream>
 #include <algorithm>
 #include "mcp_adapter.h"
+#include "input_validation.h"
 #include "json/json_builder.h"
 
 namespace mcptoolkit {
@@ -155,8 +156,19 @@ void MCPAdapter::handle_tools_call(const MCPMessage& msg) {
         args_json.assign(args_start, args_len);
     }
 
+    // INPUT VALIDATION: Check arguments for dangerous patterns
+    // This is a first-line defense before tool invocation
+    std::string tool_name(name_ptr, name_len);
+
+    // Check for obvious command injection patterns in arguments JSON
+    if (_validator.contains_shell_metacharacters(args_json) ||
+        _validator.contains_encoded_metacharacters(args_json)) {
+        send_error(msg.id, -32602, "Arguments contain invalid characters (potential injection)");
+        return;
+    }
+
     // One copy at the virtual boundary (call_tool interface takes std::string)
-    ToolResult result = call_tool(std::string(name_ptr, name_len), args_json);
+    ToolResult result = call_tool(tool_name, args_json);
 
     // Build: {"jsonrpc":"2.0","id":<n>,"result":{"content":[{"type":"text","text":"..."}],"isError":<bool>}}
     JsonBuilder cb;

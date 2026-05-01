@@ -3,6 +3,7 @@
 #include <string>
 #include <vector>
 #include "json/json_msg.h"
+#include "input_validation.h"
 
 #if defined(_WIN32) && defined(MCPTOOLKIT_SHARED)
   #ifdef MCPTOOLKIT_EXPORTS
@@ -47,6 +48,14 @@ public:
     // Start the stdio JSON-RPC read/dispatch loop. Blocks until stdin closes.
     void run();
 
+    // Register input validation rules for a tool
+    void register_tool_validation(const ToolValidationRules& rules) {
+        _validator.register_tool_rules(rules);
+    }
+
+    // Get access to the validator (for subclasses to set up rules)
+    InputValidationHandler& validator() { return _validator; }
+
 protected:
     // Override to advertise the tools this server provides.
     virtual std::vector<ToolDefinition> list_tools() { return {}; }
@@ -81,6 +90,7 @@ private:
     std::string _server_name      = "mcptoolkit";
     std::string _server_version   = "0.1.0";
     std::string _protocol_version = "2024-11-05";
+    InputValidationHandler _validator;
 };
 
 } // namespace mcptoolkit

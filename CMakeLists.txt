@@ -18,6 +18,7 @@ set(TOOLKIT_SOURCES
     mcptoolkit/src/json/json_parser.cpp
     mcptoolkit/src/json/json_builder.cpp
     mcptoolkit/src/mcp_adapter.cpp
+    mcptoolkit/src/input_validation.cpp
     mcptoolkit/dllmain.cpp      # guarded with #ifdef _WIN32 inside
 )
 

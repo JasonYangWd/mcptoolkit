@@ -2,7 +2,9 @@
 
 #include <string>
 #include <vector>
+#include <map>
 #include "json/json_msg.h"
+#include "input_validation.h"
 
 #if defined(_WIN32) && defined(MCPTOOLKIT_SHARED)
   #ifdef MCPTOOLKIT_EXPORTS

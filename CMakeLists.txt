@@ -18,6 +18,7 @@ set(TOOLKIT_SOURCES
     mcptoolkit/src/json/json_parser.cpp
     mcptoolkit/src/json/json_builder.cpp
     mcptoolkit/src/mcp_adapter.cpp
+    mcptoolkit/src/input_validation.cpp
     mcptoolkit/dllmain.cpp      # guarded with #ifdef _WIN32 inside
 )
 
@@ -68,4 +69,22 @@ if(MSVC)
     target_compile_definitions(testmcp PRIVATE _CRT_SECURE_NO_WARNINGS)
 elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     target_compile_options(testmcp PRIVATE -Wall -Wextra)
+endif()
+
+# ---------------------------------------------------------------------------
+# InputValidationHandler test executable
+# ---------------------------------------------------------------------------
+add_executable(test_input_validation mcptoolkit/test/test_input_validation.cpp)
+
+target_link_libraries(test_input_validation PRIVATE mcptoolkit)
+
+target_include_directories(test_input_validation PRIVATE
+    mcptoolkit/include
+)
+
+if(MSVC)
+    target_compile_options(test_input_validation PRIVATE /W3)
+    target_compile_definitions(test_input_validation PRIVATE _CRT_SECURE_NO_WARNINGS)
+elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(test_input_validation PRIVATE -Wall -Wextra)
 endif()

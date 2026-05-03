@@ -127,6 +127,100 @@ void MCPAdapter::handle_tools_list(const MCPMessage& msg) {
     std::cout.flush();
 }
 
+// Parse JSON arguments object into a map of string key-value pairs
+// Returns false if parsing fails
+static bool parse_json_arguments(
+    const char* json_start, size_t json_len,
+    std::map<std::string, std::string>& args_map) {
+
+  if (!json_start || json_len == 0) {
+    return true;  // empty arguments is OK
+  }
+
+  // Simple JSON object parser: finds "key":"value" pairs
+  const char* p = json_start;
+  const char* end = json_start + json_len;
+
+  // Skip to opening brace
+  while (p < end && (*p == ' ' || *p == '\t' || *p == '\n' || *p == '\r' || *p == '{')) {
+    ++p;
+  }
+
+  while (p < end) {
+    // Skip whitespace and commas
+    while (p < end && (*p == ' ' || *p == '\t' || *p == '\n' || *p == '\r' || *p == ',')) ++p;
+    if (p >= end || *p == '}') break;
+
+    // Expect opening quote of key
+    if (*p != '"') break;
+    ++p;
+
+    // Scan key until closing quote
+    const char* key_start = p;
+    while (p < end && *p != '"') {
+      if (*p == '\\') ++p;  // skip escape
+      ++p;
+    }
+    if (p >= end) break;
+
+    std::string key(key_start, p - key_start);
+    ++p;  // skip closing quote
+
+    // Skip whitespace and colon
+    while (p < end && (*p == ' ' || *p == '\t' || *p == '\n' || *p == '\r')) ++p;
+    if (p >= end || *p != ':') break;
+    ++p;
+    while (p < end && (*p == ' ' || *p == '\t' || *p == '\n' || *p == '\r')) ++p;
+    if (p >= end) break;
+
+    // Parse value (string, number, boolean, null)
+    std::string value;
+    if (*p == '"') {
+      // String value
+      ++p;
+      const char* val_start = p;
+      while (p < end && *p != '"') {
+        if (*p == '\\') ++p;
+        ++p;
+      }
+      if (p >= end) break;
+      value.assign(val_start, p - val_start);
+      ++p;  // skip closing quote
+    } else if (*p == '{' || *p == '[') {
+      // Nested object or array - skip it
+      char open = *p;
+      char close = (open == '{') ? '}' : ']';
+      int depth = 1;
+      ++p;
+      while (p < end && depth > 0) {
+        if (*p == open) ++depth;
+        else if (*p == close) --depth;
+        else if (*p == '"') {
+          ++p;
+          while (p < end && *p != '"') {
+            if (*p == '\\') ++p;
+            ++p;
+          }
+        }
+        ++p;
+      }
+      // For nested structures, store as empty string (not validated as scalar)
+      value = "";
+    } else {
+      // Number, boolean, or null
+      const char* val_start = p;
+      while (p < end && *p != ',' && *p != '}' && *p != ' ' && *p != '\t' && *p != '\n' && *p != '\r') {
+        ++p;
+      }
+      value.assign(val_start, p - val_start);
+    }
+
+    args_map[key] = value;
+  }
+
+  return true;
+}
+
 // =============================================================================
 // tools/call
 // =============================================================================
@@ -146,6 +240,8 @@ void MCPAdapter::handle_tools_call(const MCPMessage& msg) {
         return;
     }
 
+    std::string tool_name(name_ptr, name_len);
+
     // "arguments" is optional — default to empty object
     const char* args_start = nullptr;
     size_t      args_len   = 0;
@@ -155,8 +251,22 @@ void MCPAdapter::handle_tools_call(const MCPMessage& msg) {
         args_json.assign(args_start, args_len);
     }
 
-    // One copy at the virtual boundary (call_tool interface takes std::string)
-    ToolResult result = call_tool(std::string(name_ptr, name_len), args_json);
+    // Parse arguments JSON into a map for validation
+    std::map<std::string, std::string> args_map;
+    if (!parse_json_arguments(args_json.c_str(), args_json.size(), args_map)) {
+        send_error(msg.id, -32602, "Invalid arguments JSON");
+        return;
+    }
+
+    // Validate arguments for command injection attacks
+    std::string error_msg;
+    if (!InputValidationHandler::validate_arguments(tool_name, args_map, error_msg)) {
+        send_error(msg.id, -32602, error_msg.c_str());
+        return;
+    }
+
+    // Call tool with validated arguments
+    ToolResult result = call_tool(tool_name, args_json);
 
     // Build: {"jsonrpc":"2.0","id":<n>,"result":{"content":[{"type":"text","text":"..."}],"isError":<bool>}}
     JsonBuilder cb;

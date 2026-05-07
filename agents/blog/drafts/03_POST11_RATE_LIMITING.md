@@ -1,7 +1,7 @@
 # Post 11: Rate Limiting & Timeouts — The Other Side of DoS Defense
 
 **Reading time:** 10 minutes | **Difficulty:** Intermediate  
-**Target publication:** May 29, 2026
+**Published:** May 18, 2026
 
 ---
 

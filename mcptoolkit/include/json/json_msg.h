@@ -40,10 +40,14 @@ namespace mcptoolkit {
         const char* raw_input;
         size_t      raw_len;
 
+        // Default maximum message size (1 MB).
+        static constexpr size_t kDefaultMaxBytes = 1024 * 1024;
+
         // Parse a JSON-RPC 2.0 / MCP message. All pointers in the returned struct
         // reference into json_str — keep the buffer alive as long as you use the result.
-        static MCPMessage parse(const char* json_str, size_t len);
-        static MCPMessage parse(const std::string& json_str);
+        // Returns error (-32700) if message exceeds max_bytes.
+        static MCPMessage parse(const char* json_str, size_t len, size_t max_bytes = kDefaultMaxBytes);
+        static MCPMessage parse(const std::string& json_str, size_t max_bytes = kDefaultMaxBytes);
 
         MCPMessage()
             : method(nullptr),      method_len(0)

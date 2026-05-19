@@ -200,6 +200,12 @@ namespace mcptoolkit {
         msg.raw_input = input;
         msg.raw_len = len;
 
+        // Reject oversized messages (CWE-400 mitigation)
+        if (len > max_bytes) {
+            msg.error_code = -32700;  // Parse error
+            return false;
+        }
+
         skip_ws();
         if (pos >= len || input[pos] != '{') return false;
         ++pos;

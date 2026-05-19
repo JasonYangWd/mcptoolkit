@@ -7,8 +7,8 @@ namespace mcptoolkit {
     // Internal zero-copy parser. Use MCPMessage::parse() instead.
     class JsonParser {
     public:
-        JsonParser(const char* json_str, size_t length)
-            : input(json_str), len(length), pos(0) {}
+        JsonParser(const char* json_str, size_t length, size_t max_bytes = kDefaultMaxBytes)
+            : input(json_str), len(length), pos(0), max_bytes(max_bytes) {}
 
         bool parse(MCPMessage& msg);
 
@@ -16,9 +16,13 @@ namespace mcptoolkit {
         const char* const input;
         const size_t      len;
         size_t            pos;
+        const size_t      max_bytes;
 
         // Maximum nesting depth for objects and arrays.
         static constexpr int kMaxDepth = 64;
+
+        // Default maximum message size (1 MB).
+        static constexpr size_t kDefaultMaxBytes = 1024 * 1024;
 
         void skip_ws();
         bool skip_string();

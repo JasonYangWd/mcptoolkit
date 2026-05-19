@@ -230,7 +230,9 @@ namespace mcptoolkit {
                 msg.is_request = true;
             }
             else if (klen == 2 && std::memcmp(key, "id", 2) == 0) {
-                if (!parse_int(msg.id)) return false;
+                int id_val = 0;
+                if (!parse_int(id_val)) return false;
+                msg.id = id_val;
             }
             else if (klen == 6 && std::memcmp(key, "params", 6) == 0) {
                 if (!skip_value(&msg.params_start, &msg.params_len)) return false;

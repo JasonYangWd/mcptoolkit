@@ -2,6 +2,7 @@
 
 #include <string>
 #include <cstring>
+#include <optional>
 
 namespace mcptoolkit {
 
@@ -16,7 +17,7 @@ namespace mcptoolkit {
         const char* method;         // method string content (no enclosing quotes)
         size_t      method_len;
 
-        int         id;             // request/response id; -1 if absent (notification)
+        std::optional<int> id;      // request/response id; std::nullopt if absent (notification)
 
         const char* params_start;   // params JSON value (includes braces/brackets)
         size_t      params_len;
@@ -51,7 +52,7 @@ namespace mcptoolkit {
 
         MCPMessage()
             : method(nullptr),      method_len(0)
-            , id(-1)
+            , id(std::nullopt)
             , params_start(nullptr), params_len(0)
             , result_start(nullptr), result_len(0)
             , error_code(0), error_msg(nullptr), error_msg_len(0)

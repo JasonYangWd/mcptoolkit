@@ -23,7 +23,7 @@ void MCPAdapter::run() {
 
         MCPMessage msg = MCPMessage::parse(line.c_str(), line.size());
         if (!msg.valid) {
-            send_error(-1, -32700, "Parse error");
+            send_error(std::nullopt, -32700, "Parse error");
             continue;
         }
         dispatch(msg);
@@ -38,7 +38,7 @@ void MCPAdapter::dispatch(const MCPMessage& msg) {
     if (!msg.is_request) return;  // ignore bare responses we didn't expect
 
     // Notifications (no id) — handle silently, never send a response
-    if (msg.id == -1) {
+    if (!msg.id.has_value()) {
         // "notifications/initialized" signals the client finished its init
         return;
     }
@@ -64,7 +64,10 @@ void MCPAdapter::handle_initialize(const MCPMessage& msg) {
     JsonBuilder b;
     b.start_object();
       b.add_field("jsonrpc", "2.0");
-      b.add_field_number("id", msg.id);
+      if (msg.id.has_value())
+          b.add_field_number("id", msg.id.value());
+      else
+          b.add_field_raw("id", "null");
       b.add_object_field("result");
         b.add_field("protocolVersion", _protocol_version.c_str());
         b.add_object_field("capabilities");
@@ -92,7 +95,10 @@ void MCPAdapter::handle_tools_list(const MCPMessage& msg) {
     JsonBuilder b;
     b.start_object();
       b.add_field("jsonrpc", "2.0");
-      b.add_field_number("id", msg.id);
+      if (msg.id.has_value())
+          b.add_field_number("id", msg.id.value());
+      else
+          b.add_field_raw("id", "null");
       b.add_object_field("result");
         b.add_array_field("tools");
         for (const auto& t : tools) {
@@ -180,7 +186,10 @@ void MCPAdapter::handle_tools_call(const MCPMessage& msg) {
     JsonBuilder b;
     b.start_object();
       b.add_field("jsonrpc", "2.0");
-      b.add_field_number("id", msg.id);
+      if (msg.id.has_value())
+          b.add_field_number("id", msg.id.value());
+      else
+          b.add_field_raw("id", "null");
       b.add_object_field("result");
         b.add_array_field("content");
           b.add_array_element_raw(cb.get().c_str());
@@ -197,22 +206,28 @@ void MCPAdapter::handle_tools_call(const MCPMessage& msg) {
 // Send helpers
 // =============================================================================
 
-void MCPAdapter::send_response(int id, const std::string& result_json) {
+void MCPAdapter::send_response(std::optional<int> id, const std::string& result_json) {
     JsonBuilder b;
     b.start_object();
       b.add_field("jsonrpc", "2.0");
-      b.add_field_number("id", id);
+      if (id.has_value())
+          b.add_field_number("id", id.value());
+      else
+          b.add_field_raw("id", "null");
       b.add_field_raw("result", result_json.c_str());
     b.end_object();
     std::cout << b.get() << '\n';
     std::cout.flush();
 }
 
-void MCPAdapter::send_error(int id, int code, const char* message) {
+void MCPAdapter::send_error(std::optional<int> id, int code, const char* message) {
     JsonBuilder b;
     b.start_object();
       b.add_field("jsonrpc", "2.0");
-      b.add_field_number("id", id);
+      if (id.has_value())
+          b.add_field_number("id", id.value());
+      else
+          b.add_field_raw("id", "null");
       b.add_object_field("error");
         b.add_field_number("code", code);
         b.add_field("message", message);

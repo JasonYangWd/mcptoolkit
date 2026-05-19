@@ -49,7 +49,7 @@ void test_parse_initialize_request() {
 
     assert_eq("Parse valid",            msg.valid);
     assert_eq("Is marked as request",   msg.is_request);
-    assert_eq("ID correctly parsed as 1", msg.id == 1);
+    assert_eq("ID correctly parsed as 1", msg.id.has_value() && msg.id.value() == 1);
     assert_eq("Method pointer not null", msg.method != nullptr);
     assert_eq("Method length correct",  msg.method_len == strlen("initialize"));
     assert_eq("Params start pointer set", msg.params_start != nullptr);
@@ -71,7 +71,7 @@ void test_parse_tools_list() {
 
     assert_eq("Parse valid",        msg.valid);
     assert_eq("Is request",         msg.is_request);
-    assert_eq("ID is 2",            msg.id == 2);
+    assert_eq("ID is 2",            msg.id.has_value() && msg.id.value() == 2);
     assert_eq("Method pointer set", msg.method != nullptr);
     assert_eq("Method length correct", msg.method_len == strlen("tools/list"));
 
@@ -214,7 +214,10 @@ void test_round_trip() {
     JsonBuilder builder;
     builder.start_object();
     builder.add_field("jsonrpc", "2.0");
-    builder.add_field_number("id", msg.id);  // Echo back the ID
+    if (msg.id.has_value())
+        builder.add_field_number("id", msg.id.value());  // Echo back the ID
+    else
+        builder.add_field_raw("id", "null");
     builder.add_object_field("result");
     builder.add_field("processed", "yes");
     builder.close_object_field();
@@ -225,7 +228,7 @@ void test_round_trip() {
     assert_eq("Response ID matches request", response.find("\"id\":99") != std::string::npos);
     assert_eq("Response has result", response.find("result") != std::string::npos);
 
-    std::cout << "  Request ID: " << msg.id << std::endl;
+    std::cout << "  Request ID: " << msg.id.value_or(-1) << std::endl;
     std::cout << "  Response: " << response << std::endl;
 }
 
@@ -743,15 +746,15 @@ void test_security_integer_overflow() {
         MCPMessage msg = parse_mcp_json(json, strlen(json));
         assert_eq("S2a: Max int64 ID parsed", msg.valid);
         // Note: ID might overflow to negative if stored as int32
-        assert_eq("S2b: ID field present", msg.id != 0);
+        assert_eq("S2b: ID field present", msg.id.has_value() && msg.id.value() != 0);
     }
 
-    // Test 2: Negative ID (should be valid, used as sentinel)
+    // Test 2: Negative ID (now valid, not a sentinel — demonstrates -1 no longer causes collision)
     {
         const char* json = R"({"jsonrpc":"2.0","id":-1,"method":"test","params":{}})";
         MCPMessage msg = parse_mcp_json(json, strlen(json));
         assert_eq("S2c: Negative ID parsed", msg.valid);
-        assert_eq("S2d: Negative ID stored correctly", msg.id == -1);
+        assert_eq("S2d: Negative ID stored correctly", msg.id.has_value() && msg.id.value() == -1);
     }
 
     // Test 3: Very large number (should parse without hang)

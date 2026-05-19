@@ -74,8 +74,8 @@ private:
     void handle_tools_list(const MCPMessage& msg);
     void handle_tools_call(const MCPMessage& msg);
 
-    void send_response(int id, const std::string& result_json);
-    void send_error(int id, int code, const char* message);
+    void send_response(std::optional<int> id, const std::string& result_json);
+    void send_error(std::optional<int> id, int code, const char* message);
 
     // Extract a quoted-string value by key from a JSON object span.
     // Returns the string content as a zero-copy span into the input buffer.

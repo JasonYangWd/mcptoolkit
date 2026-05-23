@@ -54,6 +54,7 @@ set(TOOLKIT_SOURCES
     mcptoolkit/src/request_queue.cpp
     mcptoolkit/src/resource_monitor.cpp
     mcptoolkit/src/path_validator.cpp
+    mcptoolkit/src/authentication_handler.cpp
     mcptoolkit/dllmain.cpp      # guarded with #ifdef _WIN32 inside
 )
 
@@ -128,10 +129,15 @@ add_executable(test_input_size_limits mcptoolkit/test/test_input_size_limits.cpp
 target_link_libraries(test_input_size_limits PRIVATE mcptoolkit gtest gtest_main)
 target_include_directories(test_input_size_limits PRIVATE mcptoolkit/include)
 
+add_executable(test_authentication mcptoolkit/test/test_authentication.cpp)
+target_link_libraries(test_authentication PRIVATE mcptoolkit gtest gtest_main)
+target_include_directories(test_authentication PRIVATE mcptoolkit/include)
+
 enable_testing()
 add_test(NAME RateLimitingTests COMMAND test_rate_limiting)
 add_test(NAME PathValidatorTests COMMAND test_path_validator)
 add_test(NAME InputSizeLimitsTests COMMAND test_input_size_limits)
+add_test(NAME AuthenticationTests COMMAND test_authentication)
 
 # ---------------------------------------------------------------------------
 # libfuzzer for input validation testing (Clang only)

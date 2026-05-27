@@ -56,6 +56,7 @@ set(TOOLKIT_SOURCES
     mcptoolkit/src/path_validator.cpp
     mcptoolkit/src/authentication_handler.cpp
     mcptoolkit/src/session_manager.cpp
+    mcptoolkit/src/rbac.cpp
     mcptoolkit/dllmain.cpp      # guarded with #ifdef _WIN32 inside
 )
 
@@ -138,12 +139,17 @@ add_executable(test_session_manager mcptoolkit/test/test_session_manager.cpp)
 target_link_libraries(test_session_manager PRIVATE mcptoolkit gtest gtest_main)
 target_include_directories(test_session_manager PRIVATE mcptoolkit/include)
 
+add_executable(test_rbac mcptoolkit/test/test_rbac.cpp)
+target_link_libraries(test_rbac PRIVATE mcptoolkit gtest gtest_main)
+target_include_directories(test_rbac PRIVATE mcptoolkit/include)
+
 enable_testing()
 add_test(NAME RateLimitingTests COMMAND test_rate_limiting)
 add_test(NAME PathValidatorTests COMMAND test_path_validator)
 add_test(NAME InputSizeLimitsTests COMMAND test_input_size_limits)
 add_test(NAME AuthenticationTests COMMAND test_authentication)
 add_test(NAME SessionManagerTests COMMAND test_session_manager)
+add_test(NAME RBACTests COMMAND test_rbac)
 
 # ---------------------------------------------------------------------------
 # libfuzzer for input validation testing (Clang only)

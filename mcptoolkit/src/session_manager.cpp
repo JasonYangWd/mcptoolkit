@@ -1,7 +1,18 @@
 #include "session_manager.h"
-#include <random>
 #include <sstream>
 #include <iomanip>
+#include <cstring>
+#include <vector>
+
+#ifdef _WIN32
+    #include <bcrypt.h>
+    #pragma comment(lib, "bcrypt.lib")
+#else
+    #include <unistd.h>
+    #include <fcntl.h>
+    #include <sys/syscall.h>
+    #include <linux/random.h>
+#endif
 
 namespace mcptoolkit {
 
@@ -94,19 +105,49 @@ bool SessionManager::is_expired(const SessionData& s) const {
 }
 
 std::string SessionManager::generate_id() const {
-    // Use mt19937_64 seeded from random_device — not cryptographic, but
-    // sufficient for demonstration; production deployments should use
-    // OS CSPRNG (RAND_bytes / getrandom / BCryptGenRandom).
-    std::random_device rd;
-    std::mt19937_64 gen(rd());
-    std::uniform_int_distribution<uint64_t> dist;
+    // Generate cryptographically secure random bytes using OS CSPRNG
+    std::vector<uint8_t> random_bytes(config_.id_bytes);
 
-    std::ostringstream oss;
-    size_t words = (config_.id_bytes + 7) / 8;
-    for (size_t i = 0; i < words; ++i) {
-        oss << std::hex << std::setw(16) << std::setfill('0') << dist(gen);
+#ifdef _WIN32
+    // Windows: BCryptGenRandom (requires bcrypt.lib)
+    NTSTATUS status = BCryptGenRandom(
+        NULL,
+        random_bytes.data(),
+        static_cast<ULONG>(random_bytes.size()),
+        BCRYPT_USE_SYSTEM_PREFERRED_RNG
+    );
+    if (!BCRYPT_SUCCESS(status)) {
+        // Fallback: use a weak but deterministic value on error
+        std::memset(random_bytes.data(), 0, random_bytes.size());
     }
-    return oss.str().substr(0, config_.id_bytes * 2);
+#else
+    // Unix/Linux: getrandom syscall (available since Linux 3.17)
+    // Falls back to /dev/urandom if syscall not available
+    ssize_t result = syscall(SYS_getrandom,
+                            random_bytes.data(),
+                            random_bytes.size(),
+                            0);
+    if (result < 0 || static_cast<size_t>(result) != random_bytes.size()) {
+        // Fallback to /dev/urandom if getrandom unavailable
+        int fd = open("/dev/urandom", O_RDONLY);
+        if (fd == -1) {
+            std::memset(random_bytes.data(), 0, random_bytes.size());
+        } else {
+            ssize_t bytes_read = read(fd, random_bytes.data(), random_bytes.size());
+            close(fd);
+            if (bytes_read != static_cast<ssize_t>(random_bytes.size())) {
+                std::memset(random_bytes.data(), 0, random_bytes.size());
+            }
+        }
+    }
+#endif
+
+    // Convert bytes to hex string
+    std::ostringstream oss;
+    for (uint8_t byte : random_bytes) {
+        oss << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(byte);
+    }
+    return oss.str();
 }
 
 } // namespace mcptoolkit

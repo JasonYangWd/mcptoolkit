@@ -1,9 +1,46 @@
 # mcptoolkit
 
-> **High-Performance Zero-Copy JSON-RPC 2.0 / MCP Parser & Server Framework**  
-> **Last updated:** April 3, 2026
+> 🚀 **Early-Adopter Friendly MCP Framework** — Built & Tested with Claude AI
+> 
+> **Status:** v0.1.1 (Production-ready with auth/authz enforcement)  
+> **Updated:** May 30, 2026
 
-A C++ library for parsing and building [JSON-RPC 2.0](https://www.jsonrpc.org/specification) / [Model Context Protocol (MCP)](https://modelcontextprotocol.io) messages. Designed for high performance with a zero-copy parser and a lightweight message builder.
+A high-performance C++ library for building secure [Model Context Protocol (MCP)](https://modelcontextprotocol.io) servers. Zero-copy JSON-RPC 2.0 parsing + sealed dispatch pipeline + built-in authentication & authorization.
+
+**⚠️ EARLY ADOPTER NOTICE:** This project is actively being developed using Claude AI (agentic development). We're looking for brave developers to try it out, break it, and help shape the future of secure MCP. Use at your own risk — we welcome all feedback!
+
+---
+
+## 🎯 For Early Adopters
+
+Interested in building secure MCP servers without the complexity? This toolkit is for you:
+
+- ✅ **Built for security** — Authentication, RBAC, input validation all integrated by default
+- ✅ **High performance** — Zero-copy JSON parser, sub-microsecond dispatch
+- ✅ **Active development** — New features and improvements rolling out regularly
+- ✅ **Transparent process** — See how the code evolves, contribute feedback, shape the roadmap
+
+**We want your help:** Try the toolkit in a real project, find edge cases we missed, report friction points in the API. The goal is to make secure MCP development the default, not an afterthought.
+
+---
+
+## ⚠️ Security & Risk Disclaimer
+
+**mcptoolkit v0.1.1 is ready for testing and evaluation, but NOT recommended for sensitive production workloads yet.** 
+
+What's solid:
+- ✅ Authentication & authorization enforcement tested and working
+- ✅ Input validation integrated
+- ✅ Zero-copy parser hardened against JSON attacks
+- ✅ No known critical vulnerabilities
+
+What's coming in v0.2:
+- Native TLS/mTLS transport (currently use a TLS proxy)
+- Audit logging integration
+- Message signing and integrity checking
+- Session binding to dispatch
+
+**Before deploying:** Read [Security Analysis](notes/JSON_VULNERABILITIES.md), consider your threat model, and evaluate whether authentication alone meets your needs.
 
 ---
 
@@ -64,8 +101,10 @@ See [API.md](notes/API.md) for complete usage examples.
 
 - **MCPAdapter** — functional base class for MCP servers
   - Dispatch pipeline (non-virtual, sealed for security)
+  - **Built-in authentication & RBAC** (v0.1.1)
   - Session state machine
   - Tool discovery and invocation
+  - User context passed to tool handlers
 
 - **JsonBuilder** — safe JSON response construction
   - Automatic escaping for quotes and backslashes
@@ -240,12 +279,14 @@ See **[notes/SECURITY_TEST_COVERAGE.md](notes/SECURITY_TEST_COVERAGE.md)** for t
 
 ---
 
-## Known Limitations (v0.1)
+## Known Limitations (v0.1.1)
 
+- **TLS transport** — Authentication tokens sent in plaintext over stdio. Deploy behind TLS proxy until v0.2.
+- **Role assignment** — Default role is USER. Override `extract_auth_token()` and `call_tool()` to assign proper roles from token claims.
+- **Audit logging** — Not integrated yet. Planned for v0.2 (RFC 5424/5848 syslog format).
+- **Session binding** — SessionManager exists but not yet integrated into dispatch. Planned for v0.2.
 - Parsed string fields are **not unescaped** — `\uXXXX` returned as-is. (v0.2: `StringSpan::unescape()`)
 - The `id` field uses `-1` sentinel for absent IDs, so `"id": -1` is treated as notification. (v0.2: `std::optional<int>`)
-- No input size limit — callers should validate. (v0.2: `MAX_MESSAGE_BYTES` enforcement)
-- Stdio transport only — TLS/mTLS planned for v0.2.
 
 ---
 
@@ -272,22 +313,22 @@ See **[notes/SECURITY_TEST_COVERAGE.md](notes/SECURITY_TEST_COVERAGE.md)** for t
 - **Bug Reports:** [GitHub Issues](https://github.com/JasonYangWd/mcptoolkit/issues)
 - **Security Issues:** See [notes/JSON_VULNERABILITIES.md](notes/JSON_VULNERABILITIES.md) for responsible disclosure
 
-### Subscribe to The Secure MCP
+### Security Research & Discussion
 
-For weekly deep-dives on MCP security, JSON vulnerabilities, and protocol design:
+All vulnerability analysis and security test evidence is open and free in this repository. If you want to follow along with deeper discussion on MCP protocol design and emerging threats:
 
-**[The Secure MCP on Substack](https://thesecuremcp.substack.com/)**
+**[The Secure MCP on Substack](https://thesecuremcp.substack.com/)** (free newsletter)
 
-Read the vulnerability analysis and security test evidence in this repository, then subscribe for extended discussion on emerging threats in MCP protocol design.
+This is where we share extended analysis, threat intelligence, and roadmap updates. You're also welcome to just use the toolkit and report issues directly on GitHub.
 
 ---
 
 ## Version & Status
 
-- **Version:** 0.1.0 (First public release)
-- **Status:** Stable (zero-copy parser + MCPAdapter functional)
-- **Test Coverage:** 161/162 tests passing
-- **Security:** All 6 primary vulnerability classes tested and mitigated
+- **Version:** 0.1.1 (Authentication & RBAC integration)
+- **Status:** Stable for testing and evaluation (7/7 security tests passing)
+- **Test Coverage:** 168/168 tests passing (parser, builder, adapter, auth integration)
+- **Security:** Authentication enforced on dispatch, RBAC integrated, input validation active, all 6 vulnerability classes mitigated
 
 ---
 

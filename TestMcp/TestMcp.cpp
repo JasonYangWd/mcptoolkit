@@ -405,7 +405,8 @@ protected:
     }
 
     ToolResult call_tool(const std::string& name,
-                         const std::string& args_json) override {
+                         const std::string& args_json,
+                         const User* user = nullptr) override {
         last_tool_name = name;
         last_tool_args = args_json;
         if (name == "echo") return {"hello from echo"};
@@ -1342,7 +1343,8 @@ void test_input_validation_with_stub_server() {
         }
 
         ToolResult call_tool(const std::string& name,
-                             const std::string& args_json) override {
+                             const std::string& args_json,
+                             const User* user = nullptr) override {
             if (name == "execute") {
                 // Validate arguments before execution
                 std::string error;

@@ -48,9 +48,51 @@ void MCPAdapter::dispatch(const MCPMessage& msg) {
         return msg.method_len == slen && std::memcmp(msg.method, s, slen) == 0;
     };
 
+    // =========================================================================
+    // AUTHENTICATION & AUTHORIZATION (v0.1.1 Patch)
+    // =========================================================================
+    User current_user;
+    current_user.authenticated = false;
+
+    // 1. AUTHENTICATE (if enabled)
+    if (_auth_enabled) {
+        std::string auth_token = extract_auth_token(msg);
+        if (auth_token.empty()) {
+            send_error(msg.id, -32603, "Authentication required");
+            return;
+        }
+
+        AuthResult auth = _auth_handler.validate_request(auth_token);
+        if (!auth.allowed) {
+            send_error(msg.id, -32603, auth.error.c_str());
+            return;
+        }
+
+        // For now, create a basic user object from the token
+        // In production, you'd decode the token to extract user info
+        current_user.user_id = auth_token;  // Use token as user_id for now
+        current_user.authenticated = true;
+        current_user.role = Role::USER;  // Default role; override in subclass
+    }
+
+    // 2. AUTHORIZE for specific methods (if RBAC enabled)
+    if (_rbac_enabled && _auth_enabled) {
+        std::string method_name(msg.method, msg.method_len);
+
+        // Check permission for this method
+        if (!_rbac.check_permission(current_user, method_name)) {
+            send_error(msg.id, -32603, "Unauthorized");
+            return;
+        }
+    }
+
+    // =========================================================================
+    // DISPATCH (now authenticated & authorized)
+    // =========================================================================
+
     if (method_is("initialize", 10))  { handle_initialize(msg);  return; }
     if (method_is("tools/list", 10))  { handle_tools_list(msg);  return; }
-    if (method_is("tools/call", 10))  { handle_tools_call(msg);  return; }
+    if (method_is("tools/call", 10))  { handle_tools_call(msg, _auth_enabled ? &current_user : nullptr);  return; }
 
     send_error(msg.id, -32601, "Method not found");
 }
@@ -138,7 +180,7 @@ void MCPAdapter::handle_tools_list(const MCPMessage& msg) {
 // tools/call
 // =============================================================================
 
-void MCPAdapter::handle_tools_call(const MCPMessage& msg) {
+void MCPAdapter::handle_tools_call(const MCPMessage& msg, const User* user) {
     if (!msg.params_start || msg.params_len == 0) {
         send_error(msg.id, -32602, "Invalid params");
         return;
@@ -174,7 +216,7 @@ void MCPAdapter::handle_tools_call(const MCPMessage& msg) {
     }
 
     // One copy at the virtual boundary (call_tool interface takes std::string)
-    ToolResult result = call_tool(tool_name, args_json);
+    ToolResult result = call_tool(tool_name, args_json, user);
 
     // Build: {"jsonrpc":"2.0","id":<n>,"result":{"content":[{"type":"text","text":"..."}],"isError":<bool>}}
     JsonBuilder cb;

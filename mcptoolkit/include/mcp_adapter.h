@@ -2,8 +2,11 @@
 
 #include <string>
 #include <vector>
+#include <optional>
 #include "json/json_msg.h"
 #include "input_validation.h"
+#include "authentication_handler.h"
+#include "rbac.h"
 
 #if defined(_WIN32) && defined(MCPTOOLKIT_SHARED)
   #ifdef MCPTOOLKIT_EXPORTS
@@ -56,15 +59,42 @@ public:
     // Get access to the validator (for subclasses to set up rules)
     InputValidationHandler& validator() { return _validator; }
 
+    // Configure authentication handler
+    void configure_auth(const AuthConfig& config) {
+        _auth_handler.configure(config);
+        _auth_enabled = true;
+    }
+
+    // Get access to auth handler (for registering tokens, etc.)
+    AuthenticationHandler& auth_handler() { return _auth_handler; }
+
+    // Get access to RBAC (for configuration)
+    RoleBasedAccessControl& rbac() {
+        _rbac_enabled = true;
+        return _rbac;
+    }
+
+    // Override to extract auth token from params (optional; default extracts from "auth_token" field)
+    virtual std::string extract_auth_token(const MCPMessage& msg) {
+        const char* token_ptr = nullptr;
+        size_t token_len = 0;
+        if (extract_string(msg.params_start, msg.params_len, "auth_token", token_ptr, token_len)) {
+            return std::string(token_ptr, token_len);
+        }
+        return "";
+    }
+
 protected:
     // Override to advertise the tools this server provides.
     virtual std::vector<ToolDefinition> list_tools() { return {}; }
 
-    // Override to handle a tool invocation.
+    // Override to handle a tool invocation. User is provided for authorization checks.
     //   name      — tool name from "name" field
     //   args_json — raw JSON object from "arguments" field (at least "{}")
+    //   user      — authenticated user (contains role, permissions); null if auth disabled
     virtual ToolResult call_tool(const std::string& /*name*/,
-                                 const std::string& /*args_json*/) {
+                                 const std::string& /*args_json*/,
+                                 const User* /*user*/ = nullptr) {
         return {"unknown tool", /*is_error=*/true};
     }
 
@@ -72,7 +102,7 @@ private:
     void dispatch(const MCPMessage& msg);
     void handle_initialize(const MCPMessage& msg);
     void handle_tools_list(const MCPMessage& msg);
-    void handle_tools_call(const MCPMessage& msg);
+    void handle_tools_call(const MCPMessage& msg, const User* user);
 
     void send_response(std::optional<int> id, const std::string& result_json);
     void send_error(std::optional<int> id, int code, const char* message);
@@ -91,6 +121,10 @@ private:
     std::string _server_version   = "0.1.0";
     std::string _protocol_version = "2024-11-05";
     InputValidationHandler _validator;
+    AuthenticationHandler _auth_handler;
+    RoleBasedAccessControl _rbac;
+    bool _auth_enabled = false;
+    bool _rbac_enabled = false;
 };
 
 } // namespace mcptoolkit

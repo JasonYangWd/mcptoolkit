@@ -84,6 +84,9 @@ public:
         return "";
     }
 
+    // Validate tool definition for security issues (tool poisoning prevention)
+    static std::string validate_tool_definition(const ToolDefinition& tool);
+
 protected:
     // Override to advertise the tools this server provides.
     virtual std::vector<ToolDefinition> list_tools() { return {}; }

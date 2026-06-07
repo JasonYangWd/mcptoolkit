@@ -9,6 +9,55 @@ namespace mcptoolkit {
 
 MCPAdapter::MCPAdapter() {}
 
+std::string MCPAdapter::validate_tool_definition(const ToolDefinition& tool) {
+    // Validate tool name
+    if (tool.name.empty()) {
+        return "Tool name cannot be empty";
+    }
+    if (tool.name.find('\n') != std::string::npos ||
+        tool.name.find('\r') != std::string::npos ||
+        tool.name.find('\0') != std::string::npos) {
+        return "Tool name contains invalid control characters";
+    }
+    if (tool.name.length() > 256) {
+        return "Tool name exceeds maximum length (256 characters)";
+    }
+
+    // Validate description length
+    if (tool.description.length() > 4096) {
+        return "Tool description exceeds maximum length (4096 characters)";
+    }
+
+    // Validate parameters
+    if (tool.params.size() > 256) {
+        return "Too many parameters (maximum 256)";
+    }
+
+    for (const auto& param : tool.params) {
+        if (param.name.empty()) {
+            return "Parameter name cannot be empty";
+        }
+        if (param.name.find('\n') != std::string::npos ||
+            param.name.find('\r') != std::string::npos ||
+            param.name.find('\0') != std::string::npos) {
+            return "Parameter name contains invalid control characters";
+        }
+        if (param.name.length() > 256) {
+            return "Parameter name exceeds maximum length";
+        }
+        if (param.type.empty() ||
+            (param.type != "string" && param.type != "integer" &&
+             param.type != "boolean" && param.type != "number")) {
+            return "Parameter type must be string, integer, boolean, or number";
+        }
+        if (param.description.length() > 1024) {
+            return "Parameter description exceeds maximum length";
+        }
+    }
+
+    return "";  // Valid
+}
+
 // =============================================================================
 // Main loop
 // =============================================================================
@@ -68,9 +117,14 @@ void MCPAdapter::dispatch(const MCPMessage& msg) {
             return;
         }
 
-        // For now, create a basic user object from the token
-        // In production, you'd decode the token to extract user info
-        current_user.user_id = auth_token;  // Use token as user_id for now
+        // Decode token to extract user_id (FIX for token passthrough vulnerability)
+        std::string user_id = _auth_handler.decode_token(auth_token);
+        if (user_id.empty()) {
+            send_error(msg.id, -32603, "Invalid token: failed to decode user identity");
+            return;
+        }
+
+        current_user.user_id = user_id;  // Use decoded user_id, not raw token
         current_user.authenticated = true;
         current_user.role = Role::USER;  // Default role; override in subclass
     }
@@ -134,6 +188,15 @@ void MCPAdapter::handle_initialize(const MCPMessage& msg) {
 void MCPAdapter::handle_tools_list(const MCPMessage& msg) {
     auto tools = list_tools();
 
+    // Validate all tool definitions before returning (FIX for tool poisoning)
+    for (const auto& t : tools) {
+        std::string error = validate_tool_definition(t);
+        if (!error.empty()) {
+            send_error(msg.id, -32603, ("Invalid tool definition: " + error).c_str());
+            return;  // Reject entire response if any tool is invalid
+        }
+    }
+
     JsonBuilder b;
     b.start_object();
       b.add_field("jsonrpc", "2.0");
@@ -183,6 +246,13 @@ void MCPAdapter::handle_tools_list(const MCPMessage& msg) {
 void MCPAdapter::handle_tools_call(const MCPMessage& msg, const User* user) {
     if (!msg.params_start || msg.params_len == 0) {
         send_error(msg.id, -32602, "Invalid params");
+        return;
+    }
+
+    // Validate params size (prevent DoS via massive payloads)
+    const size_t MAX_PARAMS_SIZE = 1024 * 1024;  // 1 MB per call
+    if (msg.params_len > MAX_PARAMS_SIZE) {
+        send_error(msg.id, -32602, "Parameters exceed maximum size (1 MB)");
         return;
     }
 

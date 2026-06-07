@@ -19,12 +19,46 @@ class JsonBuilder {
 private:
     std::string buffer;
 
-    // Append a string with JSON escaping for quotes and backslashes.
+    // Append a string with JSON escaping for all required characters.
+    // Properly escapes control characters (\n, \t, etc.) and special chars.
     static void append_escaped(std::string& buf, const char* s) {
         if (!s) return;
         for (; *s; ++s) {
-            if (*s == '"' || *s == '\\') buf += '\\';
-            buf += *s;
+            switch (*s) {
+                case '"':
+                    buf += "\\\"";
+                    break;
+                case '\\':
+                    buf += "\\\\";
+                    break;
+                case '\b':
+                    buf += "\\b";
+                    break;
+                case '\f':
+                    buf += "\\f";
+                    break;
+                case '\n':
+                    buf += "\\n";
+                    break;
+                case '\r':
+                    buf += "\\r";
+                    break;
+                case '\t':
+                    buf += "\\t";
+                    break;
+                default: {
+                    unsigned char uc = static_cast<unsigned char>(*s);
+                    if (uc < 0x20) {
+                        // Escape control characters as \uXXXX
+                        char hex[8];
+                        snprintf(hex, sizeof(hex), "\\u%04x", uc);
+                        buf += hex;
+                    } else {
+                        // Printable ASCII and UTF-8 continuation bytes
+                        buf += *s;
+                    }
+                }
+            }
         }
     }
 

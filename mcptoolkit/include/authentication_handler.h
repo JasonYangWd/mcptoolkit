@@ -40,6 +40,14 @@ public:
     // Expiry check (returns false if TTL is 0 or token not registered)
     bool is_expired(const std::string& token) const;
 
+    // Decode token and extract user_id claim (CWE-NOT-USING-BEARER-PROPERLY)
+    // Returns empty string if token is invalid/expired/malformed
+    // Token format: "user_id.signature" where signature is base64(hmac(user_id, secret))
+    std::string decode_token(const std::string& auth_token) const;
+
+    // Configure token decoding secret key
+    void set_token_secret(const std::string& secret_key);
+
     // Failed-attempt tracking
     void record_failure(const std::string& client_id);
     void reset_failures(const std::string& client_id);
@@ -48,6 +56,7 @@ public:
 private:
     AuthConfig config_;
     bool configured_ = false;
+    std::string token_secret_;  // Secret key for token HMAC validation
 
     mutable std::mutex mutex_;
     std::unordered_set<std::string> revoked_tokens_;
@@ -56,6 +65,8 @@ private:
 
     std::string extract_bearer(const std::string& auth_header) const;
     bool validate_format(const std::string& token, std::string& error) const;
+    std::string compute_token_signature(const std::string& user_id) const;
+    bool verify_token_signature(const std::string& user_id, const std::string& signature) const;
 };
 
 } // namespace mcptoolkit

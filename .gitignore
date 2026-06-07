@@ -4,6 +4,10 @@
 *.vcxproj.user
 *.vcxproj.filters
 
+# CMake build directory
+build/
+cmake-build-*/
+
 # Build artifacts
 x64/
 bin/
@@ -14,8 +18,12 @@ Release/
 *.lib
 *.obj
 *.pch
-*.o 
+*.o
 *.a
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
 
 # Temporary files
 *.tmp.*
@@ -30,3 +38,9 @@ tasks/
 tasks/posted/
 tasks/drafts/
 reviews/
+
+# Fuzzer artifacts
+corpus/
+crashes/
+leaks.txt
+*.log

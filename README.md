@@ -40,7 +40,7 @@ What's coming in v0.2:
 - Message signing and integrity checking
 - Session binding to dispatch
 
-**Before deploying:** Read [Security Analysis](notes/JSON_VULNERABILITIES.md), consider your threat model, and evaluate whether authentication alone meets your needs.
+**Before deploying:** consider your threat model and evaluate whether authentication alone meets your needs.
 
 ---
 
@@ -59,24 +59,12 @@ std::string method(msg.method, msg.method_len);
 int id = msg.id;
 ```
 
-See [API.md](notes/API.md) for complete usage examples.
-
----
-
 ## Table of Contents
 
 ### Getting Started
 - [Features](#features)
 - [Building](#building)
 - [Quick Example](#quick-example)
-
-### Documentation
-- **[notes/API.md](notes/API.md)** — Usage examples and API reference
-- **[notes/TEST_RESULTS.md](notes/TEST_RESULTS.md)** — Comprehensive test coverage (161/162 passing)
-
-### Security
-- **[notes/JSON_VULNERABILITIES.md](notes/JSON_VULNERABILITIES.md)** — Threat analysis (6 vulnerability classes + emerging risks)
-- **[notes/SECURITY_TEST_COVERAGE.md](notes/SECURITY_TEST_COVERAGE.md)** — Test evidence for security claims
 
 ### Project Info
 - [Repository Layout](#repository-layout)
@@ -274,8 +262,6 @@ mcptoolkit is tested against 6 vulnerability classes + 3 emerging threats:
 - ✅ **Expansion DoS** — Linear parsing, no expansion vulnerabilities
 - ✅ **Malformed Input** — Parser never crashes
 
-See **[notes/JSON_VULNERABILITIES.md](notes/JSON_VULNERABILITIES.md)** for comprehensive threat analysis.  
-See **[notes/SECURITY_TEST_COVERAGE.md](notes/SECURITY_TEST_COVERAGE.md)** for test evidence.
 
 ---
 
@@ -290,18 +276,6 @@ See **[notes/SECURITY_TEST_COVERAGE.md](notes/SECURITY_TEST_COVERAGE.md)** for t
 
 ---
 
-## Documentation
-
-| Document | Purpose |
-|---|---|
-| **[API.md](API.md)** | Usage examples, API reference, headers to include |
-| **[TEST_RESULTS.md](TEST_RESULTS.md)** | Test breakdown, performance metrics, coverage matrix |
-| **[notes/JSON_VULNERABILITIES.md](notes/JSON_VULNERABILITIES.md)** | Threat analysis, CVE examples, real-world scenarios |
-| **[notes/SECURITY_TEST_COVERAGE.md](notes/SECURITY_TEST_COVERAGE.md)** | Test evidence, vulnerability mapping, gap analysis |
-| **[CHANGELOG.md](CHANGELOG.md)** | Release notes, version history, roadmap |
-
----
-
 ## Author & Contact
 
 **Author:** Jason Yang  
@@ -311,7 +285,7 @@ See **[notes/SECURITY_TEST_COVERAGE.md](notes/SECURITY_TEST_COVERAGE.md)** for t
 ### Issues & Feedback
 
 - **Bug Reports:** [GitHub Issues](https://github.com/JasonYangWd/mcptoolkit/issues)
-- **Security Issues:** See [notes/JSON_VULNERABILITIES.md](notes/JSON_VULNERABILITIES.md) for responsible disclosure
+- **Security Issues:** please report privately by email rather than opening a public issue
 
 ### Security Research & Discussion
 
@@ -346,4 +320,4 @@ This is where we share extended analysis, threat intelligence, and roadmap updat
 
 ---
 
-**[→ View API Documentation](notes/API.md) | [→ View Test Results](notes/TEST_RESULTS.md) | [→ Read Security Analysis](notes/JSON_VULNERABILITIES.md)**
+

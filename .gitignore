@@ -44,3 +44,6 @@ corpus/
 crashes/
 leaks.txt
 *.log
+agents/
+notes/
+scripts/

@@ -321,6 +321,20 @@ All vulnerability analysis and security test evidence is open and free in this r
 
 This is where we share extended analysis, threat intelligence, and roadmap updates. You're also welcome to just use the toolkit and report issues directly on GitHub.
 
+### Blog Series Roadmap (30 posts)
+
+**Published (Posts 1–17):**
+
+| Phase | Posts | Topics |
+|---|---|---|
+| Parser Foundations | 1–7 | Why MCP security matters, zero-copy parsing, depth limits, parser hardening, string escaping, zero-copy guarantees |
+| Deployment & DoS | 8–11 | Safe deployment patterns, algorithmic complexity attacks, command injection, rate limiting & timeouts |
+| Attack Vectors & Access Control | 12–17 | Path traversal, SSRF, authentication, session fixation, authorization, audit logging |
+
+**Coming next (Posts 18–21, drafted):** configuration & secrets security, advanced input validation, tool implementation security, and a code review checklist for MCP security.
+
+**Roadmap (Posts 22–30):** the series pivots from theory to practice — building a real C++ MCP adaptor with this toolkit, connecting it to Claude, ChatGPT, Gemini, and Grok, testing it end to end, then hardening it live: privilege separation & sandboxing, TLS/mTLS & secrets management, monitoring & detection, and a finale red-teaming the server with 2026's real attack classes (tool poisoning, prompt injection, supply chain).
+
 ---
 
 ## Version & Status

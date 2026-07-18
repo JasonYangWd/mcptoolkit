@@ -191,7 +191,7 @@ Add it to your PR template. The first time you run through it on an existing cod
 
 ## What Checklists Don't Catch
 
-Manual code review — even with a checklist — misses patterns that span multiple files, configuration values passed at runtime, and memory errors that only surface under specific conditions. Human review catches intent bugs; automated tools catch mechanical bugs. You need both — the next post covers the automated side.
+Manual code review — even with a checklist — misses patterns that span multiple files, configuration values passed at runtime, and memory errors that only surface under specific conditions. Human review catches intent bugs; automated tools catch mechanical bugs. You need both.
 
 ---
 
@@ -210,3 +210,10 @@ In the first half of 2026, the practical MCP attack surface broke down into four
 **Prompt injection via tool output** — A tool fetches a webpage, reads a file, or queries a database. The response contains `Ignore previous instructions and...`. The LLM follows it. Category 4, `contains_injection_patterns()`.
 
 The checklist in this post covers all four. The sophistication isn't in the attacks — it's in consistently applying basic checks to every tool, every time. That's what the checklist is for.
+
+
+---
+
+## What's Next
+
+Twenty-one posts of theory is enough. In the next post, we put this checklist — and everything behind it — to work on a real server we build from scratch: a C++ MCP adaptor, connected to Claude, ChatGPT, Gemini, and Grok, tested end to end, and then attacked with the very techniques this series has cataloged. The checklist stops being a document and becomes a gate on a living codebase.

@@ -188,7 +188,6 @@ int main() {
 }
 ```
 
-See [API.md](API.md) for complete examples.
 
 ---
 
@@ -233,7 +232,6 @@ build\Debug\testmcp    # Windows
 - ✅ 9 adapter tests (dispatch, error handling)
 - ✅ 13 security tests (vulnerabilities, DoS, injection)
 
-See [TEST_RESULTS.md](TEST_RESULTS.md) for detailed breakdown.
 
 ### Performance
 
